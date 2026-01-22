@@ -2,8 +2,38 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="除雪管理">
+    <meta name="theme-color" content="#0a0e27">
+    <meta name="description" content="民間除雪作業の出来高管理アプリ - SNOW OPS">
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a0e27'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='256' fill='%2300d4ff'>❄️</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>❄️</text></svg>">
+    
     <title>除雪出来高管理 - SNOW OPS</title>
+    
+    <!-- Manifest inline -->
+    <link rel="manifest" href="data:application/manifest+json,{
+        'name': '除雪出来高管理 SNOW OPS',
+        'short_name': 'SNOW OPS',
+        'description': '民間除雪作業の出来高管理アプリ',
+        'start_url': './',
+        'display': 'standalone',
+        'background_color': '%230a0e27',
+        'theme_color': '%2300d4ff',
+        'orientation': 'portrait',
+        'icons': [{
+            'src': 'data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27><rect width=%27512%27 height=%27512%27 fill=%27%230a0e27%27/><text x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-size=%27256%27 fill=%27%2300d4ff%27>❄️</text></svg>',
+            'sizes': '512x512',
+            'type': 'image/svg+xml',
+            'purpose': 'any maskable'
+        }]
+    }">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -29,6 +59,8 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         body {
@@ -41,8 +73,16 @@
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             padding-bottom: 90px;
             min-height: 100vh;
+            min-height: -webkit-fill-available;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        html {
+            height: -webkit-fill-available;
         }
 
         body::before {
@@ -62,6 +102,7 @@
                 );
             pointer-events: none;
             z-index: 1;
+            will-change: auto;
         }
 
         .header {
@@ -228,6 +269,7 @@
         .card {
             background: rgba(20, 27, 61, 0.6);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 212, 255, 0.2);
             border-radius: 24px;
             padding: 2rem 1.5rem;
@@ -237,7 +279,8 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.05);
             position: relative;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease-out;
+            will-change: transform;
         }
 
         .card::before {
@@ -249,10 +292,11 @@
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
             transition: left 0.8s;
+            pointer-events: none;
         }
 
-        .card:hover::before {
-            left: 100%;
+        .card:active {
+            transform: scale(0.99);
         }
 
         .card-title {
@@ -297,10 +341,13 @@
             border: 2px solid rgba(0, 212, 255, 0.3);
             border-radius: 16px;
             font-size: 1rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease-out;
             background: rgba(30, 39, 73, 0.4);
             color: var(--text);
             font-family: 'Exo 2', sans-serif;
+            -webkit-appearance: none;
+            appearance: none;
+            min-height: 52px;
         }
 
         .form-input::placeholder {
@@ -312,7 +359,13 @@
             border-color: var(--primary);
             background: rgba(30, 39, 73, 0.6);
             box-shadow: var(--glow), inset 0 0 20px rgba(0, 212, 255, 0.05);
-            transform: translateY(-2px);
+        }
+
+        select.form-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2300d4ff' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 3rem;
         }
 
         .btn {
@@ -322,7 +375,7 @@
             font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -334,6 +387,11 @@
             letter-spacing: 0.1em;
             position: relative;
             overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            will-change: transform;
+            min-height: 52px;
         }
 
         .btn::before {
@@ -343,10 +401,11 @@
             background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
             transform: translateX(-100%);
             transition: transform 0.6s;
+            pointer-events: none;
         }
 
-        .btn:hover::before {
-            transform: translateX(100%);
+        .btn:active {
+            transform: scale(0.97);
         }
 
         .btn-primary {
@@ -356,13 +415,7 @@
             border: 2px solid transparent;
         }
 
-        .btn-primary:hover {
-            box-shadow: var(--glow-strong), 0 0 0 1px rgba(0, 212, 255, 0.8);
-            transform: translateY(-3px);
-        }
-
         .btn-primary:active {
-            transform: translateY(-1px) scale(0.98);
             box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
         }
 
@@ -435,6 +488,7 @@
         .location-item {
             background: rgba(30, 39, 73, 0.4);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: 1.25rem;
             border-radius: 16px;
             margin-bottom: 1rem;
@@ -443,14 +497,14 @@
             display: flex;
             justify-content: space-between;
             align-items: start;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            will-change: transform;
         }
 
-        .location-item:hover {
-            border-color: var(--primary);
+        .location-item:active {
+            transform: scale(0.98);
             box-shadow: var(--glow), 0 4px 16px rgba(0, 0, 0, 0.3);
-            transform: translateX(5px);
         }
 
         .location-info {
@@ -489,6 +543,7 @@
         .checkbox-item {
             background: rgba(30, 39, 73, 0.4);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: 1.25rem;
             border-radius: 16px;
             margin-bottom: 1rem;
@@ -497,19 +552,21 @@
             align-items: center;
             gap: 1rem;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            user-select: none;
+            -webkit-user-select: none;
+            will-change: transform;
+            min-height: 68px;
         }
 
-        .checkbox-item:hover {
-            border-color: var(--primary);
-            box-shadow: var(--glow);
+        .checkbox-item:active {
+            transform: scale(0.98);
         }
 
         .checkbox-item.selected {
             border-color: var(--primary);
             background: rgba(0, 212, 255, 0.1);
             box-shadow: var(--glow);
-            transform: scale(1.02);
         }
 
         .checkbox-item input[type="checkbox"] {
@@ -517,23 +574,25 @@
             height: 28px;
             cursor: pointer;
             accent-color: var(--primary);
+            flex-shrink: 0;
         }
 
         .work-item {
             background: rgba(30, 39, 73, 0.4);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: 1.5rem;
             border-radius: 20px;
             margin-bottom: 1.5rem;
             border: 2px solid rgba(0, 212, 255, 0.2);
             border-left: 5px solid var(--secondary);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            will-change: transform;
         }
 
-        .work-item:hover {
-            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
-            transform: translateY(-2px);
+        .work-item:active {
+            transform: scale(0.99);
         }
 
         .work-header {
@@ -770,11 +829,14 @@
             bottom: 0;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
             padding: 1rem;
             animation: fadeIn 0.3s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .modal.active {
@@ -784,6 +846,7 @@
         .modal-content {
             background: rgba(20, 27, 61, 0.95);
             backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             border: 2px solid rgba(0, 212, 255, 0.3);
             border-radius: 24px;
             padding: 2rem 1.5rem;
@@ -791,8 +854,10 @@
             width: 100%;
             max-height: 85vh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), var(--glow);
             animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: auto;
         }
 
         @keyframes slideUp {
@@ -864,6 +929,109 @@
                 page-break-inside: avoid;
             }
         }
+        
+        /* スマホ最適化 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 0.75rem;
+            }
+            
+            .card {
+                padding: 1.5rem 1rem;
+                border-radius: 20px;
+            }
+            
+            .header-title {
+                font-size: 1.5rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            .summary-value {
+                font-size: 2rem;
+            }
+            
+            .report-table {
+                font-size: 0.8rem;
+            }
+            
+            .report-table th,
+            .report-table td {
+                padding: 0.75rem 0.5rem;
+            }
+            
+            .work-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tab {
+                font-size: 0.7rem;
+                padding: 0.75rem 0.25rem;
+            }
+            
+            .nav-icon {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* 極小スマホ対応 */
+        @media (max-width: 375px) {
+            .header-title {
+                font-size: 1.25rem;
+            }
+            
+            .card-title {
+                font-size: 1rem;
+            }
+            
+            .btn {
+                padding: 1rem 1.5rem;
+                font-size: 0.9rem;
+            }
+            
+            .summary-value {
+                font-size: 1.75rem;
+            }
+        }
+        
+        /* ランドスケープ対応 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 0.75rem 1rem;
+            }
+            
+            .header-title {
+                font-size: 1.25rem;
+            }
+            
+            .nav-tabs {
+                padding: 0.25rem;
+            }
+            
+            .nav-tab {
+                padding: 0.5rem 0.25rem;
+            }
+        }
+        
+        /* セーフエリア対応（ノッチ付きスマホ） */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(0px, env(safe-area-inset-left));
+                padding-right: max(0px, env(safe-area-inset-right));
+                padding-bottom: max(90px, env(safe-area-inset-bottom, 90px));
+            }
+            
+            .header {
+                padding-top: max(1.5rem, env(safe-area-inset-top, 1.5rem));
+            }
+            
+            .nav-tabs {
+                padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+            }
+        }
     </style>
 </head>
 <body>
@@ -916,6 +1084,24 @@
             <div class="card">
                 <div class="card-title">📋 登録済み契約先一覧</div>
                 <ul id="locationList" class="location-list"></ul>
+                
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.3);">
+                    <div style="font-size: 0.875rem; color: var(--text-dark); line-height: 1.6;">
+                        <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">💾 データ管理</div>
+                        <div style="margin-bottom: 0.5rem;">• <strong>データ出力</strong>：全データをバックアップ</div>
+                        <div>• <strong>データ取込</strong>：バックアップから復元または他端末から移行</div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 1rem;">
+                    <button class="btn btn-secondary" id="exportDataBtn">
+                        📤 データ出力
+                    </button>
+                    <button class="btn btn-secondary" id="importDataBtn">
+                        📥 データ取込
+                    </button>
+                </div>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;">
             </div>
         </div>
 
@@ -985,9 +1171,14 @@
                     <button class="report-tab" data-period="monthly">月次</button>
                 </div>
                 <div id="reportContent"></div>
-                <button class="btn btn-secondary" id="exportReportBtn">
-                    📄 印刷・PDF出力
-                </button>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 1rem;">
+                    <button class="btn btn-secondary" id="exportReportBtn">
+                        🖨️ 印刷
+                    </button>
+                    <button class="btn btn-secondary" id="exportReportDataBtn">
+                        📤 レポート出力
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1171,6 +1362,194 @@
             Storage.set('locations', locations);
             renderLocationList();
         };
+        
+        // データエクスポート
+        document.getElementById('exportDataBtn').addEventListener('click', () => {
+            try {
+                const locations = Storage.getArray('locations');
+                const workRecords = Storage.getArray('workRecords');
+                
+                if (locations.length === 0 && workRecords.length === 0) {
+                    alert('⚠️ エクスポートするデータがありません');
+                    return;
+                }
+                
+                const exportData = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    appName: 'SNOW OPS - 除雪出来高管理',
+                    locations: locations,
+                    workRecords: workRecords,
+                    statistics: {
+                        totalLocations: locations.length,
+                        totalWorkRecords: workRecords.length,
+                        totalWorkDays: workRecords.length,
+                        dateRange: workRecords.length > 0 ? {
+                            start: workRecords[0].date,
+                            end: workRecords[workRecords.length - 1].date
+                        } : null
+                    }
+                };
+                
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                const dateStr = new Date().toISOString().split('T')[0];
+                link.download = `snow-ops-backup-${dateStr}.json`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                alert(
+                    '✅ データをエクスポートしました！\n\n' +
+                    `📍 契約先: ${locations.length}件\n` +
+                    `📊 作業記録: ${workRecords.length}件\n\n` +
+                    '💡 このファイルを安全な場所に保存してください'
+                );
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('❌ エクスポートに失敗しました: ' + error.message);
+            }
+        });
+        
+        // データインポート
+        document.getElementById('importDataBtn').addEventListener('click', () => {
+            document.getElementById('importFileInput').click();
+        });
+        
+        document.getElementById('importFileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                // ファイル名チェック
+                if (!file.name.endsWith('.json')) {
+                    throw new Error('JSONファイルを選択してください');
+                }
+                
+                const text = await file.text();
+                let importData;
+                
+                try {
+                    importData = JSON.parse(text);
+                } catch (parseError) {
+                    throw new Error('JSONファイルの形式が正しくありません');
+                }
+                
+                // データ検証
+                if (!importData.locations || !Array.isArray(importData.locations)) {
+                    throw new Error('契約先データが見つかりません');
+                }
+                
+                if (!importData.workRecords || !Array.isArray(importData.workRecords)) {
+                    throw new Error('作業記録データが見つかりません');
+                }
+                
+                // バージョンチェック
+                if (importData.version && importData.version !== '1.0') {
+                    console.warn('異なるバージョンのデータです:', importData.version);
+                }
+                
+                // インポート内容の確認
+                const confirmMessage = 
+                    '📥 データ取込確認\n\n' +
+                    `ファイル: ${file.name}\n` +
+                    `エクスポート日時: ${importData.exportDate ? new Date(importData.exportDate).toLocaleString('ja-JP') : '不明'}\n\n` +
+                    `📍 契約先: ${importData.locations.length}件\n` +
+                    `📊 作業記録: ${importData.workRecords.length}件\n\n` +
+                    '取込方法を選択:\n' +
+                    '【OK】: 既存データに追加\n' +
+                    '【キャンセル】: 既存データを上書き';
+                
+                const choice = confirm(confirmMessage);
+                
+                if (choice) {
+                    // 追加モード
+                    const existingLocations = Storage.getArray('locations');
+                    const existingRecords = Storage.getArray('workRecords');
+                    
+                    // IDの重複を避けるため、新しいIDを割り当て
+                    const maxLocationId = existingLocations.length > 0 
+                        ? Math.max(...existingLocations.map(l => l.id))
+                        : 0;
+                    
+                    const idMapping = {};
+                    const newLocations = importData.locations.map((loc, index) => {
+                        const newId = maxLocationId + index + 1;
+                        idMapping[loc.id] = newId;
+                        return {
+                            ...loc,
+                            id: newId
+                        };
+                    });
+                    
+                    // 作業記録のlocationIdも更新
+                    const newRecords = importData.workRecords.map(record => ({
+                        ...record,
+                        locations: record.locations.map(loc => ({
+                            ...loc,
+                            locationId: idMapping[loc.locationId] || loc.locationId
+                        }))
+                    }));
+                    
+                    Storage.set('locations', [...existingLocations, ...newLocations]);
+                    Storage.set('workRecords', [...existingRecords, ...newRecords]);
+                    
+                    alert(
+                        '✅ データを追加しました！\n\n' +
+                        `📍 契約先: ${newLocations.length}件追加\n` +
+                        `📊 作業記録: ${newRecords.length}件追加\n\n` +
+                        `合計:\n` +
+                        `契約先: ${existingLocations.length + newLocations.length}件\n` +
+                        `作業記録: ${existingRecords.length + newRecords.length}件`
+                    );
+                } else {
+                    // 上書きモード
+                    const doubleCheck = confirm(
+                        '⚠️ 重要な確認\n\n' +
+                        '現在のすべてのデータが削除され、\n' +
+                        'インポートするデータで置き換えられます。\n\n' +
+                        '本当に上書きしますか？'
+                    );
+                    
+                    if (!doubleCheck) {
+                        alert('❌ インポートをキャンセルしました');
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    Storage.set('locations', importData.locations);
+                    Storage.set('workRecords', importData.workRecords);
+                    
+                    alert(
+                        '✅ データを上書きしました！\n\n' +
+                        `📍 契約先: ${importData.locations.length}件\n` +
+                        `📊 作業記録: ${importData.workRecords.length}件`
+                    );
+                }
+                
+                // 画面を更新
+                renderLocationList();
+                
+                // 集計画面が表示されている場合は更新
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && activeTab.dataset.screen === 'report') {
+                    updateReport('daily');
+                }
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                alert('❌ インポートに失敗しました\n\n' + error.message);
+            }
+            
+            // ファイル入力をリセット
+            e.target.value = '';
+        });
 
         // 除雪箇所選択モーダル
         document.getElementById('selectLocationsBtn').addEventListener('click', () => {
@@ -1792,6 +2171,123 @@
         document.getElementById('exportReportBtn').addEventListener('click', () => {
             window.print();
         });
+        
+        // レポートデータエクスポート
+        document.getElementById('exportReportDataBtn').addEventListener('click', () => {
+            try {
+                const activeTab = document.querySelector('.report-tab.active');
+                const period = activeTab ? activeTab.dataset.period : 'daily';
+                
+                const workRecords = Storage.getArray('workRecords');
+                const locations = Storage.getArray('locations');
+                
+                if (workRecords.length === 0) {
+                    alert('エクスポートする作業記録がありません');
+                    return;
+                }
+                
+                let filteredRecords = workRecords;
+                const now = new Date();
+                
+                if (period === 'weekly') {
+                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    filteredRecords = workRecords.filter(r => new Date(r.date) >= weekAgo);
+                } else if (period === 'monthly') {
+                    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                    filteredRecords = workRecords.filter(r => new Date(r.date) >= monthAgo);
+                }
+                
+                // 集計データを生成
+                const summary = {};
+                filteredRecords.forEach(record => {
+                    record.locations.forEach(loc => {
+                        if (!summary[loc.locationId]) {
+                            const locationInfo = locations.find(l => l.id === loc.locationId) || {};
+                            summary[loc.locationId] = {
+                                name: loc.name,
+                                count: 0,
+                                totalTime: 0,
+                                totalRevenue: 0,
+                                priceType: loc.priceType || locationInfo.priceType || 'flat',
+                                priceAmount: loc.priceAmount || locationInfo.priceAmount || 0,
+                                workDetails: []
+                            };
+                        }
+                        summary[loc.locationId].count++;
+                        
+                        if (loc.netWorkTime !== undefined) {
+                            summary[loc.locationId].totalTime += loc.netWorkTime;
+                        } else {
+                            const workTime = calculateTimeDiff(loc.workStart, loc.workEnd);
+                            const breakTime = calculateTimeDiff(loc.breakStart, loc.breakEnd);
+                            summary[loc.locationId].totalTime += (workTime - breakTime);
+                        }
+                        
+                        if (loc.calculatedAmount !== undefined) {
+                            summary[loc.locationId].totalRevenue += loc.calculatedAmount;
+                        }
+                        
+                        summary[loc.locationId].workDetails.push({
+                            date: record.date,
+                            workStart: loc.workStart,
+                            workEnd: loc.workEnd,
+                            breakStart: loc.breakStart,
+                            breakEnd: loc.breakEnd,
+                            netWorkTime: loc.netWorkTime,
+                            calculatedAmount: loc.calculatedAmount || 0
+                        });
+                    });
+                });
+                
+                const summaryArray = Object.values(summary).map(s => ({
+                    ...s,
+                    avgTime: s.totalTime / s.count
+                }));
+                
+                const totalRevenue = summaryArray.reduce((sum, s) => sum + s.totalRevenue, 0);
+                const totalWorkTime = summaryArray.reduce((sum, s) => sum + s.totalTime, 0);
+                
+                const reportData = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    appName: 'SNOW OPS - 除雪出来高管理',
+                    reportType: period,
+                    period: {
+                        type: period === 'daily' ? '日次' : period === 'weekly' ? '週次' : '月次',
+                        startDate: filteredRecords.length > 0 ? filteredRecords[0].date : null,
+                        endDate: filteredRecords.length > 0 ? filteredRecords[filteredRecords.length - 1].date : null
+                    },
+                    summary: {
+                        totalRevenue: totalRevenue,
+                        totalWorkTime: totalWorkTime,
+                        totalLocations: summaryArray.length,
+                        totalWorkCount: summaryArray.reduce((sum, s) => sum + s.count, 0)
+                    },
+                    details: summaryArray,
+                    rawRecords: filteredRecords
+                };
+                
+                const dataStr = JSON.stringify(reportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                const dateStr = new Date().toISOString().split('T')[0];
+                const periodName = period === 'daily' ? '日次' : period === 'weekly' ? '週次' : '月次';
+                link.download = `snow-ops-report-${periodName}-${dateStr}.json`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                alert(`✅ ${periodName}レポートをエクスポートしました！\n\n総売上: ¥${totalRevenue.toLocaleString()}\n総作業時間: ${totalWorkTime}分`);
+            } catch (error) {
+                console.error('Report export error:', error);
+                alert('❌ レポートのエクスポートに失敗しました: ' + error.message);
+            }
+        });
 
         // 初期化
         updateCurrentDate();
@@ -1801,6 +2297,100 @@
         // イベントリスナーが正しく登録されたか確認
         console.log('アプリ初期化完了');
         console.log('saveWorkBtn:', document.getElementById('saveWorkBtn'));
+        
+        // PWA インストール処理
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // インストールボタンを表示（ヘッダーに追加）
+            const installBtn = document.createElement('button');
+            installBtn.textContent = '📱 アプリ化';
+            installBtn.className = 'btn btn-secondary btn-small';
+            installBtn.style.cssText = 'position: fixed; top: 1rem; right: 1rem; z-index: 1000; width: auto; padding: 0.5rem 1rem; font-size: 0.75rem; margin: 0;';
+            
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response: ${outcome}`);
+                    deferredPrompt = null;
+                    installBtn.remove();
+                }
+            });
+            
+            document.body.appendChild(installBtn);
+            
+            // 3秒後にフェードイン
+            setTimeout(() => {
+                installBtn.style.opacity = '0';
+                installBtn.style.transition = 'opacity 0.5s';
+                setTimeout(() => installBtn.style.opacity = '1', 100);
+            }, 3000);
+        });
+        
+        // インストール完了イベント
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA installed successfully');
+            deferredPrompt = null;
+        });
+        
+        // Service Worker登録
+        if ('serviceWorker' in navigator) {
+            // Service Workerをインラインで登録
+            const swCode = `
+                const CACHE_NAME = 'snow-ops-v1';
+                const urlsToCache = ['./', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
+                
+                self.addEventListener('install', (event) => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+                    );
+                });
+                
+                self.addEventListener('fetch', (event) => {
+                    event.respondWith(
+                        caches.match(event.request).then((response) => {
+                            return response || fetch(event.request);
+                        })
+                    );
+                });
+            `;
+            
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('Service Worker registered:', registration);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+        
+        // パフォーマンス最適化: passive event listeners
+        document.addEventListener('touchstart', () => {}, { passive: true });
+        document.addEventListener('touchmove', () => {}, { passive: true });
+        
+        // スマホのスクロール最適化
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        
+        // バックグラウンド時のタイマー停止
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // アプリがバックグラウンドに
+                console.log('App in background');
+            } else {
+                // アプリがフォアグラウンドに
+                console.log('App in foreground');
+                updateCurrentDate();
+            }
+        });
     </script>
 </body>
 </html>
