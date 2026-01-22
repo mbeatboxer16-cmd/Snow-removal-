@@ -1155,8 +1155,8 @@
     <div id="screen-work" class="screen">
         <div class="card">
             <div class="card-title">🚜 本日の除雪作業</div>
-            <button class="btn btn-primary" id="selectLocationsBtn">
-                除雪箇所を選択
+            <button class="btn btn-primary" id="addWorkBtn">
+                ➕ 作業を追加
             </button>
         </div>
 
@@ -1239,24 +1239,51 @@
 </div>
 
 <!-- 除雪箇所選択モーダル -->
-<div id="selectModal" class="modal">
+<!-- 作業追加モーダル -->
+<div id="addWorkModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header">除雪箇所を選択</div>
-        <div id="selectLocationList"></div>
-        <button class="btn btn-primary" id="confirmSelectionBtn">
-            確定して順序設定へ
+        <div class="modal-header">作業先を選択</div>
+        <div id="addWorkLocationList" style="max-height: 60vh; overflow-y: auto;"></div>
+        <button class="btn btn-secondary" id="cancelAddWorkBtn" style="margin-top: 1rem;">
+            キャンセル
         </button>
     </div>
 </div>
 
-<!-- 順序設定モーダル -->
-<div id="orderModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">除雪順序を設定</div>
-        <div id="orderLocationList"></div>
-        <button class="btn btn-success" id="confirmOrderBtn">
-            ✅ 確定
-        </button>
+<!-- 編集モーダル -->
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 1rem; overflow-y: auto;">
+    <div style="max-width: 600px; margin: 2rem auto; background: var(--surface); border-radius: 24px; padding: 2rem; border: 2px solid rgba(0, 212, 255, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--primary); font-family: 'Orbitron', sans-serif; font-size: 1.25rem; margin: 0;">✏️ 契約先を編集</h3>
+            <button onclick="closeEditModal()" style="background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; padding: 0.5rem; line-height: 1;">✕</button>
+        </div>
+        
+        <form id="editLocationForm">
+            <input type="hidden" id="editLocationId">
+            <div class="form-group">
+                <label class="form-label">契約先名</label>
+                <input type="text" id="editLocationName" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">住所</label>
+                <input type="text" id="editLocationAddress" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">単価タイプ</label>
+                <select id="editPriceType" class="form-input" required>
+                    <option value="flat">一式</option>
+                    <option value="hourly">時間単価</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">単価（円）</label>
+                <input type="number" step="1" id="editPriceAmount" class="form-input" required>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                <button type="button" onclick="closeEditModal()" class="btn btn-secondary">キャンセル</button>
+                <button type="submit" class="btn btn-primary">✅ 保存</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1292,11 +1319,17 @@
         return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    // DOMが読み込まれたら実行
+    document.addEventListener('DOMContentLoaded', function() {
+    
     // 現在日時表示
     function updateCurrentDate() {
         const now = new Date();
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
-        document.getElementById('currentDate').textContent = now.toLocaleDateString('ja-JP', options);
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) {
+            dateElement.textContent = now.toLocaleDateString('ja-JP', options);
+        }
     }
 
     // 画面切り替え
@@ -1323,21 +1356,47 @@
     document.getElementById('locationForm').addEventListener('submit', (e) => {
         e.preventDefault();
         
-        const location = {
-            id: Date.now(),
-            name: document.getElementById('locationName').value,
-            address: document.getElementById('locationAddress').value,
-            priceType: document.getElementById('priceType').value,
-            priceAmount: parseFloat(document.getElementById('priceAmount').value)
-        };
-        
-        const locations = Storage.getArray('locations');
-        locations.push(location);
-        Storage.set('locations', locations);
-        
-        e.target.reset();
-        renderLocationList();
-        alert('✅ 契約先を登録しました');
+        try {
+            // バリデーション
+            const name = document.getElementById('locationName').value.trim();
+            const address = document.getElementById('locationAddress').value.trim();
+            const priceType = document.getElementById('priceType').value;
+            const priceAmount = parseFloat(document.getElementById('priceAmount').value);
+            
+            if (!name) {
+                alert('❌ 契約先名を入力してください');
+                return;
+            }
+            
+            if (!address) {
+                alert('❌ 住所を入力してください');
+                return;
+            }
+            
+            if (isNaN(priceAmount) || priceAmount < 0) {
+                alert('❌ 単価に正しい金額を入力してください');
+                return;
+            }
+            
+            const location = {
+                id: Date.now(),
+                name: name,
+                address: address,
+                priceType: priceType,
+                priceAmount: priceAmount
+            };
+            
+            const locations = Storage.getArray('locations');
+            locations.push(location);
+            Storage.set('locations', locations);
+            
+            e.target.reset();
+            renderLocationList();
+            alert('✅ 契約先を登録しました');
+        } catch (error) {
+            console.error('契約先登録エラー:', error);
+            alert('❌ 登録に失敗しました: ' + error.message);
+        }
     });
 
     // 契約先一覧表示
@@ -1369,7 +1428,8 @@
                     </button>
                 </div>
                 <div class="location-actions">
-                    <button class="btn btn-danger btn-small" onclick="deleteLocation(${loc.id})">削除</button>
+                    <button class="btn btn-secondary btn-small" onclick="editLocation(${loc.id})" style="margin-bottom: 0.5rem;">✏️ 編集</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteLocation(${loc.id})">🗑️ 削除</button>
                 </div>
             </li>
         `}).join('');
@@ -1394,6 +1454,86 @@
         Storage.set('locations', locations);
         renderLocationList();
     };
+    
+    // 契約先編集
+    window.editLocation = function(id) {
+        const locations = Storage.getArray('locations');
+        const location = locations.find(loc => loc.id === id);
+        
+        if (!location) {
+            alert('契約先が見つかりません');
+            return;
+        }
+        
+        // フォームに値をセット
+        document.getElementById('editLocationId').value = location.id;
+        document.getElementById('editLocationName').value = location.name;
+        document.getElementById('editLocationAddress').value = location.address;
+        document.getElementById('editPriceType').value = location.priceType || 'flat';
+        document.getElementById('editPriceAmount').value = location.priceAmount || 0;
+        
+        // モーダルを表示
+        document.getElementById('editModal').style.display = 'block';
+    };
+    
+    // 編集モーダルを閉じる
+    window.closeEditModal = function() {
+        document.getElementById('editModal').style.display = 'none';
+    };
+    
+    // 編集フォーム送信
+    document.getElementById('editLocationForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        try {
+            const id = parseInt(document.getElementById('editLocationId').value);
+            const name = document.getElementById('editLocationName').value.trim();
+            const address = document.getElementById('editLocationAddress').value.trim();
+            const priceType = document.getElementById('editPriceType').value;
+            const priceAmount = parseFloat(document.getElementById('editPriceAmount').value);
+            
+            // バリデーション
+            if (!name) {
+                alert('❌ 契約先名を入力してください');
+                return;
+            }
+            
+            if (!address) {
+                alert('❌ 住所を入力してください');
+                return;
+            }
+            
+            if (isNaN(priceAmount) || priceAmount < 0) {
+                alert('❌ 単価に正しい金額を入力してください');
+                return;
+            }
+            
+            const locations = Storage.getArray('locations');
+            const index = locations.findIndex(loc => loc.id === id);
+            
+            if (index === -1) {
+                alert('❌ 契約先が見つかりません');
+                return;
+            }
+            
+            // データを更新
+            locations[index] = {
+                ...locations[index],
+                name: name,
+                address: address,
+                priceType: priceType,
+                priceAmount: priceAmount
+            };
+            
+            Storage.set('locations', locations);
+            closeEditModal();
+            renderLocationList();
+            alert('✅ 契約先を更新しました');
+        } catch (error) {
+            console.error('契約先更新エラー:', error);
+            alert('❌ 更新に失敗しました: ' + error.message);
+        }
+    });
     
     // データエクスポート
     document.getElementById('exportDataBtn').addEventListener('click', () => {
@@ -1584,135 +1724,137 @@
     });
 
     // 除雪箇所選択モーダル
-    document.getElementById('selectLocationsBtn').addEventListener('click', () => {
+    // 作業リストの管理
+    let workItems = [];
+    let workItemCounter = 0;
+
+    // 作業追加ボタン
+    document.getElementById('addWorkBtn').addEventListener('click', () => {
         const locations = Storage.getArray('locations');
-        const selectList = document.getElementById('selectLocationList');
         
         if (locations.length === 0) {
             alert('契約先を先に登録してください');
             return;
         }
         
-        selectList.innerHTML = locations.map(loc => `
-            <div class="checkbox-item" data-id="${loc.id}">
-                <input type="checkbox" id="loc-${loc.id}">
-                <label for="loc-${loc.id}" style="flex: 1; cursor: pointer;">
-                    <div style="font-weight: 700;">${loc.name}</div>
-                    <div style="font-size: 0.875rem; color: var(--text-light);">${loc.address}</div>
-                </label>
-            </div>
-        `).join('');
-        
-        // チェックボックスのイベント
-        selectList.querySelectorAll('.checkbox-item').forEach(item => {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                }
-                item.classList.toggle('selected', checkbox.checked);
-            });
-        });
-        
-        document.getElementById('selectModal').classList.add('active');
-    });
-
-    // 選択確定
-    document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
-        const selectedIds = Array.from(document.querySelectorAll('#selectLocationList input:checked'))
-            .map(cb => parseInt(cb.id.replace('loc-', '')));
-        
-        if (selectedIds.length === 0) {
-            alert('除雪箇所を選択してください');
-            return;
-        }
-        
-        document.getElementById('selectModal').classList.remove('active');
-        showOrderModal(selectedIds);
-    });
-
-    // 順序設定モーダル
-    function showOrderModal(locationIds) {
-        const locations = Storage.getArray('locations');
-        const selectedLocations = locationIds.map(id => locations.find(loc => loc.id === id));
-        
-        const orderList = document.getElementById('orderLocationList');
-        orderList.innerHTML = selectedLocations.map((loc, index) => `
-            <div class="work-item" data-id="${loc.id}">
-                <div class="work-header">
-                    <div class="work-order">${index + 1}</div>
-                    <div class="work-name">${loc.name}</div>
-                    <div class="order-controls">
-                        <button class="order-btn" onclick="moveUp(this)" ${index === 0 ? 'disabled' : ''}>▲</button>
-                        <button class="order-btn" onclick="moveDown(this)" ${index === selectedLocations.length - 1 ? 'disabled' : ''}>▼</button>
-                    </div>
+        const list = document.getElementById('addWorkLocationList');
+        list.innerHTML = locations.map(loc => `
+            <div class="checkbox-item" onclick="addWorkLocation(${loc.id})" style="cursor: pointer; padding: 1rem; margin-bottom: 0.75rem; background: rgba(30, 39, 73, 0.4); border: 2px solid rgba(0, 212, 255, 0.3); border-radius: 16px;">
+                <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">${loc.name}</div>
+                <div style="font-size: 0.875rem; color: var(--text-dark);">${loc.address}</div>
+                <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+                    <span style="color: var(--accent);">💰 ${loc.priceType === 'flat' ? '一式' : '時間単価'}</span>
+                    <span style="color: var(--text); font-weight: 700; margin-left: 0.5rem;">${(loc.priceAmount || 0).toLocaleString()}円</span>
                 </div>
             </div>
         `).join('');
         
-        document.getElementById('orderModal').classList.add('active');
-    }
-
-    // 順序変更
-    window.moveUp = function(btn) {
-        const item = btn.closest('.work-item');
-        const prev = item.previousElementSibling;
-        if (prev) {
-            item.parentNode.insertBefore(item, prev);
-            updateOrderNumbers();
-        }
-    };
-
-    window.moveDown = function(btn) {
-        const item = btn.closest('.work-item');
-        const next = item.nextElementSibling;
-        if (next) {
-            item.parentNode.insertBefore(next, item);
-            updateOrderNumbers();
-        }
-    };
-
-    function updateOrderNumbers() {
-        const items = document.querySelectorAll('#orderLocationList .work-item');
-        items.forEach((item, index) => {
-            item.querySelector('.work-order').textContent = index + 1;
-            const upBtn = item.querySelector('.order-controls button:first-child');
-            const downBtn = item.querySelector('.order-controls button:last-child');
-            upBtn.disabled = index === 0;
-            downBtn.disabled = index === items.length - 1;
-        });
-    }
-
-    // 順序確定
-    document.getElementById('confirmOrderBtn').addEventListener('click', () => {
-        const orderedIds = Array.from(document.querySelectorAll('#orderLocationList .work-item'))
-            .map(item => parseInt(item.dataset.id));
-        
-        document.getElementById('orderModal').classList.remove('active');
-        createWorkList(orderedIds);
+        document.getElementById('addWorkModal').classList.add('active');
     });
 
-    // 作業リスト作成
-    function createWorkList(locationIds) {
-        const locations = Storage.getArray('locations');
-        const orderedLocations = locationIds.map(id => {
-            const loc = locations.find(l => l.id === id);
-            // 既存データとの互換性のため、単価情報がない場合はデフォルト値を設定
-            if (!loc.priceType) {
-                loc.priceType = 'flat';
-                loc.priceAmount = 0;
+    // キャンセルボタン
+    document.getElementById('cancelAddWorkBtn').addEventListener('click', () => {
+        document.getElementById('addWorkModal').classList.remove('active');
+    });
+
+    // 作業を追加
+    window.addWorkLocation = function(locationId) {
+        try {
+            const locations = Storage.getArray('locations');
+            const location = locations.find(l => l.id === locationId);
+            
+            if (!location) {
+                console.error('Location not found:', locationId);
+                alert('❌ 契約先が見つかりません');
+                return;
             }
-            return loc;
-        });
+            
+            // 既存データとの互換性のため、単価情報がない場合はデフォルト値を設定
+            if (!location.priceType) {
+                location.priceType = 'flat';
+                location.priceAmount = 0;
+            }
+            
+            const workId = workItemCounter++;
+            workItems.push({
+                id: workId,
+                locationId: location.id,
+                location: location
+            });
+            
+            document.getElementById('addWorkModal').classList.remove('active');
+            renderWorkList();
+            document.getElementById('workSummaryCard').style.display = 'block';
+        } catch (error) {
+            console.error('作業追加エラー:', error);
+            alert('❌ 作業の追加に失敗しました: ' + error.message);
+        }
+    };
+
+    // 作業を削除
+    window.removeWorkItem = function(workId) {
+        if (!confirm('この作業を削除しますか？')) return;
         
-        const container = document.getElementById('workListContainer');
-        container.innerHTML = orderedLocations.map((loc, index) => {
-            return `
+        workItems = workItems.filter(item => item.id !== workId);
+        renderWorkList();
+        
+        if (workItems.length === 0) {
+            document.getElementById('workSummaryCard').style.display = 'none';
+        }
+    };
+
+    // 作業を上に移動
+    window.moveWorkUp = function(workId) {
+        const index = workItems.findIndex(item => item.id === workId);
+        if (index > 0) {
+            [workItems[index - 1], workItems[index]] = [workItems[index], workItems[index - 1]];
+            renderWorkList();
+        }
+    };
+
+    // 作業を下に移動
+    window.moveWorkDown = function(workId) {
+        const index = workItems.findIndex(item => item.id === workId);
+        if (index < workItems.length - 1) {
+            [workItems[index], workItems[index + 1]] = [workItems[index + 1], workItems[index]];
+            renderWorkList();
+        }
+    };
+
+    // 作業リストをレンダリング
+    // 作業リストをレンダリング
+    function renderWorkList() {
+        try {
+            const container = document.getElementById('workListContainer');
+            
+            if (!container) {
+                console.error('Work list container not found');
+                return;
+            }
+            
+            if (workItems.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = workItems.map((item, index) => {
+                const loc = item.location;
+                if (!loc) {
+                    console.warn('Location not found for work item:', item);
+                    return '';
+                }
+                
+                return `
                 <div class="card">
                     <div class="work-item">
                         <div class="work-header">
                             <div class="work-order">${index + 1}</div>
                             <div class="work-name">${loc.name}</div>
+                            <div class="order-controls">
+                                <button class="order-btn" onclick="moveWorkUp(${item.id})" ${index === 0 ? 'disabled' : ''} title="上に移動">▲</button>
+                                <button class="order-btn" onclick="moveWorkDown(${item.id})" ${index === workItems.length - 1 ? 'disabled' : ''} title="下に移動">▼</button>
+                                <button class="order-btn" onclick="removeWorkItem(${item.id})" style="background: var(--danger); border-color: var(--danger);" title="削除">✕</button>
+                            </div>
                         </div>
                         
                         <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 212, 255, 0.1); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3);">
@@ -1729,47 +1871,47 @@
                             </div>
                             <div style="flex: 1;">
                                 <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">💵 予定金額</div>
-                                <div class="estimated-amount" data-index="${index}" style="font-size: 1.125rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">-</div>
+                                <div class="estimated-amount" data-id="${item.id}" style="font-size: 1.125rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">-</div>
                             </div>
                         </div>
 
                         <div style="margin-top: 1rem;">
                             <div class="work-detail-label">🔧 作業時間</div>
                             <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <button class="btn btn-time work-start-btn" data-index="${index}" onclick="recordTime(this, 'work-start')" style="flex: 1;">
+                                <button class="btn btn-time work-start-btn" data-id="${item.id}" onclick="recordTime(this, 'work-start')" style="flex: 1;">
                                     ▶ 開始
                                 </button>
-                                <button class="btn btn-time work-end-btn" data-index="${index}" onclick="recordTime(this, 'work-end')" style="flex: 1;" disabled>
+                                <button class="btn btn-time work-end-btn" data-id="${item.id}" onclick="recordTime(this, 'work-end')" style="flex: 1;" disabled>
                                     ■ 終了
                                 </button>
                             </div>
                             <div class="work-detail-value" style="text-align: center; padding: 0.75rem; background: rgba(20, 27, 61, 0.6); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.2);">
-                                <span class="work-time-display" data-index="${index}">--:-- ~ --:--</span>
+                                <span class="work-time-display" data-id="${item.id}">--:-- ~ --:--</span>
                             </div>
-                            <input type="hidden" class="work-start" data-index="${index}">
-                            <input type="hidden" class="work-end" data-index="${index}">
+                            <input type="hidden" class="work-start" data-id="${item.id}">
+                            <input type="hidden" class="work-end" data-id="${item.id}">
                         </div>
 
                         <div style="margin-top: 1.5rem;">
                             <div class="work-detail-label">☕ 休憩時間</div>
                             <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <button class="btn btn-time break-start-btn" data-index="${index}" onclick="recordTime(this, 'break-start')" style="flex: 1;" disabled>
+                                <button class="btn btn-time break-start-btn" data-id="${item.id}" onclick="recordTime(this, 'break-start')" style="flex: 1;" disabled>
                                     ▶ 開始
                                 </button>
-                                <button class="btn btn-time break-end-btn" data-index="${index}" onclick="recordTime(this, 'break-end')" style="flex: 1;" disabled>
+                                <button class="btn btn-time break-end-btn" data-id="${item.id}" onclick="recordTime(this, 'break-end')" style="flex: 1;" disabled>
                                     ■ 終了
                                 </button>
                             </div>
                             <div class="work-detail-value" style="text-align: center; padding: 0.75rem; background: rgba(20, 27, 61, 0.6); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.2);">
-                                <span class="break-time-display" data-index="${index}">--:-- ~ --:--</span>
+                                <span class="break-time-display" data-id="${item.id}">--:-- ~ --:--</span>
                             </div>
-                            <input type="hidden" class="break-start" data-index="${index}">
-                            <input type="hidden" class="break-end" data-index="${index}">
+                            <input type="hidden" class="break-start" data-id="${item.id}">
+                            <input type="hidden" class="break-end" data-id="${item.id}">
                         </div>
 
                         <div style="margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(99, 102, 241, 0.1)); border-radius: 16px; border: 2px solid rgba(0, 212, 255, 0.3); text-align: center;">
                             <div class="work-detail-label">⏱️ 正味所要時間</div>
-                            <div class="work-detail-value work-duration" data-index="${index}" style="font-size: 1.5rem; margin-top: 0.5rem;">-</div>
+                            <div class="work-detail-value work-duration" data-id="${item.id}" style="font-size: 1.5rem; margin-top: 0.5rem;">-</div>
                         </div>
                     </div>
                 </div>
@@ -1777,104 +1919,169 @@
         }).join('');
         
         // 単価情報を保存（グローバル変数に）
-        window.currentWorkLocations = orderedLocations;
+        window.currentWorkLocations = workItems.map(item => item.location);
         
-        document.getElementById('workSummaryCard').style.display = 'block';
         calculateSummary();
+        } catch (error) {
+            console.error('作業リストレンダリングエラー:', error);
+            const container = document.getElementById('workListContainer');
+            if (container) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>作業リストの表示に失敗しました</div>';
+            }
+        }
     }
 
     // 時間記録
     window.recordTime = function(btn, type) {
-        const index = btn.dataset.index;
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        
-        if (type === 'work-start') {
-            document.querySelector(`.work-start[data-index="${index}"]`).value = timeStr;
-            document.querySelector(`.work-time-display[data-index="${index}"]`).textContent = timeStr + ' ~ --:--';
-            btn.classList.add('active');
-            btn.disabled = true;
-            btn.innerHTML = '✓ 開始済';
-            document.querySelector(`.work-end-btn[data-index="${index}"]`).disabled = false;
-        } else if (type === 'work-end') {
-            document.querySelector(`.work-end[data-index="${index}"]`).value = timeStr;
-            const startTime = document.querySelector(`.work-start[data-index="${index}"]`).value;
-            document.querySelector(`.work-time-display[data-index="${index}"]`).textContent = startTime + ' ~ ' + timeStr;
-            btn.classList.add('active');
-            btn.disabled = true;
-            btn.innerHTML = '✓ 終了済';
-            document.querySelector(`.break-start-btn[data-index="${index}"]`).disabled = false;
-            calculateWorkDuration(index);
-        } else if (type === 'break-start') {
-            document.querySelector(`.break-start[data-index="${index}"]`).value = timeStr;
-            document.querySelector(`.break-time-display[data-index="${index}"]`).textContent = timeStr + ' ~ --:--';
-            btn.classList.add('active');
-            btn.disabled = true;
-            btn.innerHTML = '✓ 開始済';
-            document.querySelector(`.break-end-btn[data-index="${index}"]`).disabled = false;
-        } else if (type === 'break-end') {
-            document.querySelector(`.break-end[data-index="${index}"]`).value = timeStr;
-            const startTime = document.querySelector(`.break-start[data-index="${index}"]`).value;
-            document.querySelector(`.break-time-display[data-index="${index}"]`).textContent = startTime + ' ~ ' + timeStr;
-            btn.classList.add('active');
-            btn.disabled = true;
-            btn.innerHTML = '✓ 終了済';
-            calculateWorkDuration(index);
+        try {
+            const id = btn.dataset.id;
+            if (!id) {
+                console.error('No data-id found on button');
+                return;
+            }
+            
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            if (type === 'work-start') {
+                const input = document.querySelector(`.work-start[data-id="${id}"]`);
+                const display = document.querySelector(`.work-time-display[data-id="${id}"]`);
+                const endBtn = document.querySelector(`.work-end-btn[data-id="${id}"]`);
+                
+                if (!input || !display || !endBtn) {
+                    console.error('Required elements not found for work-start');
+                    return;
+                }
+                
+                input.value = timeStr;
+                display.textContent = timeStr + ' ~ --:--';
+                btn.classList.add('active');
+                btn.disabled = true;
+                btn.innerHTML = '✓ 開始済';
+                endBtn.disabled = false;
+            } else if (type === 'work-end') {
+                const input = document.querySelector(`.work-end[data-id="${id}"]`);
+                const startInput = document.querySelector(`.work-start[data-id="${id}"]`);
+                const display = document.querySelector(`.work-time-display[data-id="${id}"]`);
+                const breakStartBtn = document.querySelector(`.break-start-btn[data-id="${id}"]`);
+                
+                if (!input || !startInput || !display || !breakStartBtn) {
+                    console.error('Required elements not found for work-end');
+                    return;
+                }
+                
+                input.value = timeStr;
+                const startTime = startInput.value;
+                display.textContent = startTime + ' ~ ' + timeStr;
+                btn.classList.add('active');
+                btn.disabled = true;
+                btn.innerHTML = '✓ 終了済';
+                breakStartBtn.disabled = false;
+                calculateWorkDuration(id);
+            } else if (type === 'break-start') {
+                const input = document.querySelector(`.break-start[data-id="${id}"]`);
+                const display = document.querySelector(`.break-time-display[data-id="${id}"]`);
+                const endBtn = document.querySelector(`.break-end-btn[data-id="${id}"]`);
+                
+                if (!input || !display || !endBtn) {
+                    console.error('Required elements not found for break-start');
+                    return;
+                }
+                
+                input.value = timeStr;
+                display.textContent = timeStr + ' ~ --:--';
+                btn.classList.add('active');
+                btn.disabled = true;
+                btn.innerHTML = '✓ 開始済';
+                endBtn.disabled = false;
+            } else if (type === 'break-end') {
+                const input = document.querySelector(`.break-end[data-id="${id}"]`);
+                const startInput = document.querySelector(`.break-start[data-id="${id}"]`);
+                const display = document.querySelector(`.break-time-display[data-id="${id}"]`);
+                
+                if (!input || !startInput || !display) {
+                    console.error('Required elements not found for break-end');
+                    return;
+                }
+                
+                input.value = timeStr;
+                const startTime = startInput.value;
+                display.textContent = startTime + ' ~ ' + timeStr;
+                btn.classList.add('active');
+                btn.disabled = true;
+                btn.innerHTML = '✓ 終了済';
+                calculateWorkDuration(id);
+            }
+            
+            calculateSummary();
+        } catch (error) {
+            console.error('時間記録エラー:', error);
+            alert('❌ 時間の記録に失敗しました: ' + error.message);
         }
-        
-        calculateSummary();
     };
 
     // 作業時間計算
-    function calculateWorkDuration(index) {
-        const startInput = document.querySelector(`.work-start[data-index="${index}"]`);
-        const endInput = document.querySelector(`.work-end[data-index="${index}"]`);
-        const breakStartInput = document.querySelector(`.break-start[data-index="${index}"]`);
-        const breakEndInput = document.querySelector(`.break-end[data-index="${index}"]`);
-        const durationDiv = document.querySelector(`.work-duration[data-index="${index}"]`);
-        const estimatedAmountDiv = document.querySelector(`.estimated-amount[data-index="${index}"]`);
-        
-        const workTime = calculateTimeDiff(startInput.value, endInput.value);
-        const breakTime = calculateTimeDiff(breakStartInput.value, breakEndInput.value);
-        const netTime = workTime - breakTime;
-        
-        if (workTime > 0) {
-            durationDiv.textContent = `${netTime}分${breakTime > 0 ? ' (休憩' + breakTime + '分)' : ''}`;
+    function calculateWorkDuration(id) {
+        try {
+            const startInput = document.querySelector(`.work-start[data-id="${id}"]`);
+            const endInput = document.querySelector(`.work-end[data-id="${id}"]`);
+            const breakStartInput = document.querySelector(`.break-start[data-id="${id}"]`);
+            const breakEndInput = document.querySelector(`.break-end[data-id="${id}"]`);
+            const durationDiv = document.querySelector(`.work-duration[data-id="${id}"]`);
+            const estimatedAmountDiv = document.querySelector(`.estimated-amount[data-id="${id}"]`);
             
-            // 金額計算
-            if (window.currentWorkLocations && window.currentWorkLocations[index]) {
-                const location = window.currentWorkLocations[index];
-                let amount = 0;
-                if (location.priceType === 'flat') {
-                    amount = location.priceAmount || 0;
-                } else { // hourly
-                    amount = Math.round((netTime / 60) * (location.priceAmount || 0));
-                }
-                if (estimatedAmountDiv) {
+            if (!startInput || !endInput || !durationDiv) {
+                console.warn('Required elements not found for work duration calculation');
+                return;
+            }
+            
+            const workTime = calculateTimeDiff(startInput.value, endInput.value);
+            const breakTime = calculateTimeDiff(breakStartInput?.value, breakEndInput?.value);
+            const netTime = workTime - breakTime;
+            
+            if (workTime > 0) {
+                durationDiv.textContent = `${netTime}分${breakTime > 0 ? ' (休憩' + breakTime + '分)' : ''}`;
+                
+                // 金額計算
+                const workItem = workItems.find(item => item.id === parseInt(id));
+                if (workItem && estimatedAmountDiv) {
+                    const location = workItem.location;
+                    let amount = 0;
+                    if (location.priceType === 'flat') {
+                        amount = location.priceAmount || 0;
+                    } else { // hourly
+                        amount = Math.round((netTime / 60) * (location.priceAmount || 0));
+                    }
                     estimatedAmountDiv.textContent = `¥${amount.toLocaleString()}`;
                 }
+            } else {
+                durationDiv.textContent = '-';
+                if (estimatedAmountDiv) {
+                    estimatedAmountDiv.textContent = '-';
+                }
             }
-        } else {
-            durationDiv.textContent = '-';
-            if (estimatedAmountDiv) {
-                estimatedAmountDiv.textContent = '-';
-            }
+            
+            calculateSummary();
+        } catch (error) {
+            console.error('作業時間計算エラー:', error);
         }
-        
-        calculateSummary();
     }
 
     // サマリー計算
     function calculateSummary() {
-        const locations = document.querySelectorAll('.work-item').length;
+        const locations = workItems.length;
         let totalWorkTime = 0;
         let totalBreakTime = 0;
         let totalRevenue = 0;
         
-        document.querySelectorAll('.work-start').forEach((startInput, index) => {
-            const endInput = document.querySelector(`.work-end[data-index="${index}"]`);
-            const breakStartInput = document.querySelector(`.break-start[data-index="${index}"]`);
-            const breakEndInput = document.querySelector(`.break-end[data-index="${index}"]`);
+        workItems.forEach((item) => {
+            const id = item.id;
+            const startInput = document.querySelector(`.work-start[data-id="${id}"]`);
+            const endInput = document.querySelector(`.work-end[data-id="${id}"]`);
+            const breakStartInput = document.querySelector(`.break-start[data-id="${id}"]`);
+            const breakEndInput = document.querySelector(`.break-end[data-id="${id}"]`);
+            
+            if (!startInput) return;
             
             const workTime = calculateTimeDiff(startInput.value, endInput.value);
             const breakTime = calculateTimeDiff(breakStartInput.value, breakEndInput.value);
@@ -1883,8 +2090,8 @@
             totalBreakTime += breakTime;
             
             // 金額計算
-            if (workTime > 0 && window.currentWorkLocations && window.currentWorkLocations[index]) {
-                const location = window.currentWorkLocations[index];
+            if (workTime > 0) {
+                const location = item.location;
                 const netTime = workTime - breakTime;
                 if (location.priceType === 'flat') {
                     totalRevenue += location.priceAmount || 0;
@@ -1931,10 +2138,10 @@
                         return;
                     }
                     
-                    const startInput = document.querySelector(`.work-start[data-index="${index}"]`);
-                    const endInput = document.querySelector(`.work-end[data-index="${index}"]`);
-                    const breakStartInput = document.querySelector(`.break-start[data-index="${index}"]`);
-                    const breakEndInput = document.querySelector(`.break-end[data-index="${index}"]`);
+                    const startInput = document.querySelector(`.work-start[data-id="${item.id}"]`);
+                    const endInput = document.querySelector(`.work-end[data-id="${item.id}"]`);
+                    const breakStartInput = document.querySelector(`.break-start[data-id="${item.id}"]`);
+                    const breakEndInput = document.querySelector(`.break-end[data-id="${item.id}"]`);
                     
                     const workTime = calculateTimeDiff(startInput.value, endInput.value);
                     const breakTime = calculateTimeDiff(breakStartInput.value, breakEndInput.value);
@@ -1988,10 +2195,13 @@
             
             // 作業リストをクリア
             setTimeout(() => {
+                workItems = [];
+                workItemCounter = 0;
                 document.getElementById('workListContainer').innerHTML = '';
                 document.getElementById('workSummaryCard').style.display = 'none';
                 window.currentWorkLocations = null;
-            }, 1000);
+                statusDiv.textContent = '';
+            }, 1500);
             
         } catch (error) {
             console.error('保存エラー:', error);
@@ -2445,6 +2655,13 @@
             updateCurrentDate();
         }
     });
+    
+    // 初期化
+    updateCurrentDate();
+    renderLocationList();
+    updateReport('daily');
+    
+    }); // DOMContentLoaded終了
 </script>
 ```
 
