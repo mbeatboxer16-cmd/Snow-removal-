@@ -1111,25 +1111,6 @@
                     <input type="text" id="locationAddress" class="form-input" placeholder="例：○○市○○町1-2-3" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">緯度</label>
-                    <input type="number" step="any" id="locationLat" class="form-input" placeholder="例：35.681236" required>
-                    <div style="font-size: 0.75rem; color: var(--text-dark); margin-top: 0.5rem; line-height: 1.5;">
-                        💡 Google Mapsで住所を検索 → URLの数字（@35.681236,139.767125）をコピー
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">経度</label>
-                    <input type="number" step="any" id="locationLng" class="form-input" placeholder="例：139.767125" required>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.75rem;">
-                        <button type="button" class="btn btn-secondary btn-small" id="pasteCoordinatesBtn">
-                            📋 座標ペースト
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-small" id="openMapsBtn">
-                            🗺️ Maps検索
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
                     <label class="form-label">単価タイプ</label>
                     <select id="priceType" class="form-input" required>
                         <option value="flat">一式</option>
@@ -1187,13 +1168,6 @@
                 <div class="summary-card">
                     <div class="summary-label">作業箇所</div>
                     <div class="summary-value" id="summaryLocations">0</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-label">総移動距離</div>
-                    <div class="summary-value">
-                        <span id="summaryDistance">0.0</span>
-                        <span class="summary-unit">km</span>
-                    </div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-label">作業時間</div>
@@ -1302,23 +1276,6 @@
     };
 
     // 距離計算（ヒュベニの公式）
-    function calculateDistance(lat1, lng1, lat2, lng2) {
-        const toRad = (deg) => deg * Math.PI / 180;
-        const R = 6371; // 地球の半径（km）
-        
-        const dLat = toRad(lat2 - lat1);
-        const dLng = toRad(lng2 - lng1);
-        const lat1Rad = toRad(lat1);
-        const lat2Rad = toRad(lat2);
-        
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                 Math.cos(lat1Rad) * Math.cos(lat2Rad) *
-                 Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
-        return R * c;
-    }
-
     // 時間差計算（分）
     function calculateTimeDiff(start, end) {
         if (!start || !end) return 0;
@@ -1366,31 +1323,10 @@
     document.getElementById('locationForm').addEventListener('submit', (e) => {
         e.preventDefault();
         
-        const lat = parseFloat(document.getElementById('locationLat').value);
-        const lng = parseFloat(document.getElementById('locationLng').value);
-        
-        // 座標の妥当性チェック
-        if (isNaN(lat) || isNaN(lng)) {
-            alert('❌ 緯度・経度に有効な数値を入力してください');
-            return;
-        }
-        
-        if (lat < -90 || lat > 90) {
-            alert('❌ 緯度は-90から90の範囲で入力してください');
-            return;
-        }
-        
-        if (lng < -180 || lng > 180) {
-            alert('❌ 経度は-180から180の範囲で入力してください');
-            return;
-        }
-        
         const location = {
             id: Date.now(),
             name: document.getElementById('locationName').value,
             address: document.getElementById('locationAddress').value,
-            lat: lat,
-            lng: lng,
             priceType: document.getElementById('priceType').value,
             priceAmount: parseFloat(document.getElementById('priceAmount').value)
         };
@@ -1402,189 +1338,6 @@
         e.target.reset();
         renderLocationList();
         alert('✅ 契約先を登録しました');
-    });
-    
-    // 座標入力欄の自動クリーンアップ
-    ['locationLat', 'locationLng'].forEach(id => {
-        const input = document.getElementById(id);
-        
-        input.addEventListener('input', (e) => {
-            // 入力値から数値以外を除去（マイナス記号とピリオドは残す）
-            let value = e.target.value;
-            value = value.replace(/[^\d.-]/g, '');
-            
-            // 複数のピリオドを1つに
-            const parts = value.split('.');
-            if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
-            }
-            
-            e.target.value = value;
-        });
-        
-        input.addEventListener('paste', (e) => {
-            // ペースト時に自動クリーンアップ
-            setTimeout(() => {
-                let value = input.value;
-                // 余分な空白を削除
-                value = value.trim();
-                // 数値以外を除去
-                value = value.replace(/[^\d.-]/g, '');
-                input.value = value;
-                
-                // バリデーション表示
-                const num = parseFloat(value);
-                if (!isNaN(num)) {
-                    input.style.borderColor = 'var(--success)';
-                    setTimeout(() => {
-                        input.style.borderColor = '';
-                    }, 1000);
-                }
-            }, 10);
-        });
-    });
-    
-    // Google Mapsで検索ボタン
-    document.getElementById('openMapsBtn').addEventListener('click', () => {
-        const address = document.getElementById('locationAddress').value;
-        if (!address) {
-            alert('💡 先に住所を入力してください');
-            document.getElementById('locationAddress').focus();
-            return;
-        }
-        
-        // Google Mapsで検索
-        const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
-        
-        // 新しいウィンドウで開く
-        const newWindow = window.open(mapsUrl, '_blank');
-        
-        if (newWindow) {
-            // 使い方の説明を表示
-            setTimeout(() => {
-                alert(
-                    '📍 座標の取得方法\n\n' +
-                    '1. Google Mapsで目的地を確認\n' +
-                    '2. 位置を長押し（スマホ）またはクリック（PC）\n' +
-                    '3. 下部に表示される座標をタップ\n' +
-                    '4. 座標をコピー\n' +
-                    '5. このアプリに戻って「📋 座標ペースト」をタップ'
-                );
-            }, 500);
-        }
-    });
-    
-    // 座標ペーストボタン
-    document.getElementById('pasteCoordinatesBtn').addEventListener('click', async () => {
-        try {
-            // クリップボードから読み取り
-            let text = '';
-            
-            if (navigator.clipboard && navigator.clipboard.readText) {
-                text = await navigator.clipboard.readText();
-            } else {
-                // フォールバック：手動入力
-                text = prompt(
-                    '📋 座標を貼り付けてください\n\n' +
-                    '対応形式:\n' +
-                    '• 35.681236, 139.767125\n' +
-                    '• 35.681236 139.767125\n' +
-                    '• https://maps.google.com/@35.681236,139.767125\n' +
-                    '• @35.681236,139.767125'
-                );
-                if (!text) return;
-            }
-            
-            console.log('Clipboard text:', text);
-            
-            // 座標を抽出
-            let lat = null;
-            let lng = null;
-            
-            // 余分な空白を削除
-            text = text.trim();
-            
-            // パターン1: Google MapsのURL (@lat,lng)
-            const urlPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
-            const urlMatch = text.match(urlPattern);
-            
-            if (urlMatch) {
-                lat = parseFloat(urlMatch[1]);
-                lng = parseFloat(urlMatch[2]);
-            } else {
-                // パターン2: 座標のみ - カンマ区切り
-                const commaPattern = /(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/;
-                const commaMatch = text.match(commaPattern);
-                
-                if (commaMatch) {
-                    lat = parseFloat(commaMatch[1]);
-                    lng = parseFloat(commaMatch[2]);
-                } else {
-                    // パターン3: 座標のみ - スペース区切り
-                    const spacePattern = /(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/;
-                    const spaceMatch = text.match(spacePattern);
-                    
-                    if (spaceMatch) {
-                        lat = parseFloat(spaceMatch[1]);
-                        lng = parseFloat(spaceMatch[2]);
-                    } else {
-                        // パターン4: 数字が2つだけある場合
-                        const numbers = text.match(/-?\d+\.?\d*/g);
-                        if (numbers && numbers.length >= 2) {
-                            lat = parseFloat(numbers[0]);
-                            lng = parseFloat(numbers[1]);
-                        }
-                    }
-                }
-            }
-            
-            // 座標の妥当性チェック
-            if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                    document.getElementById('locationLat').value = lat;
-                    document.getElementById('locationLng').value = lng;
-                    
-                    // 入力欄をハイライト
-                    const latInput = document.getElementById('locationLat');
-                    const lngInput = document.getElementById('locationLng');
-                    
-                    latInput.style.borderColor = 'var(--success)';
-                    lngInput.style.borderColor = 'var(--success)';
-                    latInput.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
-                    lngInput.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
-                    
-                    setTimeout(() => {
-                        latInput.style.borderColor = '';
-                        lngInput.style.borderColor = '';
-                        latInput.style.boxShadow = '';
-                        lngInput.style.boxShadow = '';
-                    }, 2000);
-                    
-                    alert(
-                        '✅ 座標を入力しました！\n\n' +
-                        `📍 緯度: ${lat}\n` +
-                        `📍 経度: ${lng}`
-                    );
-                } else {
-                    throw new Error('座標の範囲が不正です\n（緯度: -90～90、経度: -180～180）');
-                }
-            } else {
-                throw new Error('座標が見つかりません');
-            }
-            
-        } catch (error) {
-            console.error('Paste error:', error);
-            alert(
-                '❌ 座標の取得に失敗しました\n\n' +
-                (error.message || '') + '\n\n' +
-                '対応形式:\n' +
-                '• 35.681236, 139.767125\n' +
-                '• 35.681236 139.767125\n' +
-                '• https://maps.google.com/@35.681236,139.767125\n' +
-                '• @35.681236,139.767125\n\n' +
-                '手動で緯度・経度を入力してください'
-            );
-        }
     });
 
     // 契約先一覧表示
@@ -1607,11 +1360,13 @@
                 <div class="location-info">
                     <div class="location-name">${loc.name}</div>
                     <div class="location-address">${loc.address}</div>
-                    <div class="location-coords">📍 ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}</div>
                     <div style="margin-top: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(251, 191, 36, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.4);">
                         <span style="color: var(--accent); font-weight: 700;">💰 ${priceType === 'flat' ? '一式' : '時間'}</span>
                         <span style="color: var(--text); font-weight: 700; font-family: 'Orbitron', sans-serif;">${priceAmount.toLocaleString()}円${priceType === 'hourly' ? '/時間' : ''}</span>
                     </div>
+                    <button class="btn btn-secondary btn-small" onclick="openGoogleMaps('${loc.address.replace(/'/g, "\\'")}', '${loc.name.replace(/'/g, "\\'")}', event)" style="margin-top: 0.75rem; width: auto;">
+                        🗺️ マップで見る
+                    </button>
                 </div>
                 <div class="location-actions">
                     <button class="btn btn-danger btn-small" onclick="deleteLocation(${loc.id})">削除</button>
@@ -1619,6 +1374,16 @@
             </li>
         `}).join('');
     }
+    
+    // Googleマップで開く
+    window.openGoogleMaps = function(address, name, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        const query = encodeURIComponent(address);
+        const mapsUrl = `https://www.google.com/maps/search/${query}`;
+        window.open(mapsUrl, '_blank');
+    };
 
     // 契約先削除
     window.deleteLocation = function(id) {
@@ -1942,19 +1707,19 @@
         
         const container = document.getElementById('workListContainer');
         container.innerHTML = orderedLocations.map((loc, index) => {
-            let distance = 0;
-            if (index > 0) {
-                const prevLoc = orderedLocations[index - 1];
-                distance = calculateDistance(prevLoc.lat, prevLoc.lng, loc.lat, loc.lng);
-            }
-            
             return `
                 <div class="card">
                     <div class="work-item">
                         <div class="work-header">
                             <div class="work-order">${index + 1}</div>
                             <div class="work-name">${loc.name}</div>
-                            ${index > 0 ? `<div class="distance-badge">🚗 ${distance.toFixed(1)} km</div>` : ''}
+                        </div>
+                        
+                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 212, 255, 0.1); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3);">
+                            <div style="font-size: 0.875rem; color: var(--text-dark); margin-bottom: 0.5rem;">📍 ${loc.address}</div>
+                            <button class="btn btn-secondary btn-small" onclick="openGoogleMaps('${loc.address.replace(/'/g, "\\'")}', '${loc.name.replace(/'/g, "\\'")}', event)" style="width: 100%;">
+                                🗺️ マップで見る
+                            </button>
                         </div>
                         
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.15); border-radius: 12px; border: 2px solid rgba(251, 191, 36, 0.4); display: flex; align-items: center; gap: 1rem;">
@@ -2102,15 +1867,9 @@
     // サマリー計算
     function calculateSummary() {
         const locations = document.querySelectorAll('.work-item').length;
-        let totalDistance = 0;
         let totalWorkTime = 0;
         let totalBreakTime = 0;
         let totalRevenue = 0;
-        
-        document.querySelectorAll('.distance-badge').forEach(badge => {
-            const distance = parseFloat(badge.textContent.match(/[\d.]+/)[0]);
-            totalDistance += distance;
-        });
         
         document.querySelectorAll('.work-start').forEach((startInput, index) => {
             const endInput = document.querySelector(`.work-end[data-index="${index}"]`);
@@ -2136,7 +1895,6 @@
         });
         
         document.getElementById('summaryLocations').textContent = locations;
-        document.getElementById('summaryDistance').textContent = totalDistance.toFixed(1);
         document.getElementById('summaryWorkTime').textContent = totalWorkTime - totalBreakTime;
         document.getElementById('summaryBreakTime').textContent = totalBreakTime;
         document.getElementById('summaryRevenue').textContent = totalRevenue.toLocaleString();
