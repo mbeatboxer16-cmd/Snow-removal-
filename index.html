@@ -1118,8 +1118,14 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">単価（円）</label>
-                    <input type="number" step="1" id="priceAmount" class="form-input" placeholder="例：10000" required>
+                    <label class="form-label">🌞 昼間単価（円）</label>
+                    <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.5rem;">5:00～20:00</div>
+                    <input type="number" step="1" id="dayPrice" class="form-input" placeholder="例：10000" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🌙 夜間単価（円）</label>
+                    <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.5rem;">20:01～4:59</div>
+                    <input type="number" step="1" id="nightPrice" class="form-input" placeholder="例：15000" required>
                 </div>
                 <button type="submit" class="btn btn-primary">
                     ✅ 登録する
@@ -1269,15 +1275,14 @@
                 <input type="text" id="editLocationAddress" class="form-input" required>
             </div>
             <div class="form-group">
-                <label class="form-label">単価タイプ</label>
-                <select id="editPriceType" class="form-input" required>
-                    <option value="flat">一式</option>
-                    <option value="hourly">時間単価</option>
-                </select>
+                <label class="form-label">🌞 昼間単価（円）</label>
+                <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.5rem;">5:00～20:00</div>
+                <input type="number" step="1" id="editDayPrice" class="form-input" required>
             </div>
             <div class="form-group">
-                <label class="form-label">単価（円）</label>
-                <input type="number" step="1" id="editPriceAmount" class="form-input" required>
+                <label class="form-label">🌙 夜間単価（円）</label>
+                <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.5rem;">20:01～4:59</div>
+                <input type="number" step="1" id="editNightPrice" class="form-input" required>
             </div>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
                 <button type="button" onclick="closeEditModal()" class="btn btn-secondary">キャンセル</button>
@@ -1311,6 +1316,82 @@
         const startMin = sh * 60 + sm;
         const endMin = eh * 60 + em;
         return endMin - startMin;
+    }
+    
+    // 昼夜判定（時刻から判定）
+    // 昼間: 5:00〜20:00
+    // 夜間: 20:01〜4:59
+    function isDaytime(timeStr) {
+        if (!timeStr) return true; // デフォルトは昼間
+        
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes;
+        
+        // 5:00 = 300分, 20:00 = 1200分
+        const dayStart = 5 * 60;  // 300
+        const dayEnd = 20 * 60;   // 1200
+        
+        // 昼間の範囲内かチェック
+        return totalMinutes >= dayStart && totalMinutes <= dayEnd;
+    }
+    
+    // 時刻から昼夜アイコンを取得
+    function getTimeIcon(timeStr) {
+        return isDaytime(timeStr) ? '🌞' : '🌙';
+    }
+    
+    // 時刻から昼夜テキストを取得
+    function getTimeText(timeStr) {
+        return isDaytime(timeStr) ? '昼間' : '夜間';
+    }
+    
+    // 時刻から昼夜カラーを取得
+    function getTimeColor(timeStr) {
+        return isDaytime(timeStr) ? 'var(--accent)' : 'var(--primary)';
+    }
+    
+    // 時間帯判定（昼間: true, 夜間: false）
+    // 昼間: 5:00～20:00
+    // 夜間: 20:01～4:59
+    function isDayTime(hour, minute) {
+        const timeInMinutes = hour * 60 + minute;
+        const dayStart = 5 * 60; // 5:00
+        const dayEnd = 20 * 60; // 20:00
+        
+        return timeInMinutes >= dayStart && timeInMinutes <= dayEnd;
+    }
+    
+    // 作業時間を昼間と夜間に分割計算（分単位で返す）
+    function calculateDayNightTime(startTime, endTime) {
+        if (!startTime || !endTime) {
+            return { dayMinutes: 0, nightMinutes: 0 };
+        }
+        
+        const [sh, sm] = startTime.split(':').map(Number);
+        const [eh, em] = endTime.split(':').map(Number);
+        
+        let dayMinutes = 0;
+        let nightMinutes = 0;
+        
+        // 開始時刻と終了時刻を分単位に変換
+        let currentMinutes = sh * 60 + sm;
+        const endMinutes = eh * 60 + em;
+        
+        // 1分ごとに時間帯を判定
+        while (currentMinutes < endMinutes) {
+            const currentHour = Math.floor(currentMinutes / 60);
+            const currentMinute = currentMinutes % 60;
+            
+            if (isDayTime(currentHour, currentMinute)) {
+                dayMinutes++;
+            } else {
+                nightMinutes++;
+            }
+            
+            currentMinutes++;
+        }
+        
+        return { dayMinutes, nightMinutes };
     }
 
     // 日付フォーマット
@@ -1363,8 +1444,8 @@
             // バリデーション
             const name = document.getElementById('locationName').value.trim();
             const address = document.getElementById('locationAddress').value.trim();
-            const priceType = document.getElementById('priceType').value;
-            const priceAmount = parseFloat(document.getElementById('priceAmount').value);
+            const dayPrice = parseFloat(document.getElementById('dayPrice').value);
+            const nightPrice = parseFloat(document.getElementById('nightPrice').value);
             
             if (!name) {
                 alert('❌ 契約先名を入力してください');
@@ -1376,8 +1457,13 @@
                 return;
             }
             
-            if (isNaN(priceAmount) || priceAmount < 0) {
-                alert('❌ 単価に正しい金額を入力してください');
+            if (isNaN(dayPrice) || dayPrice < 0) {
+                alert('❌ 昼間単価に正しい金額を入力してください');
+                return;
+            }
+            
+            if (isNaN(nightPrice) || nightPrice < 0) {
+                alert('❌ 夜間単価に正しい金額を入力してください');
                 return;
             }
             
@@ -1385,8 +1471,8 @@
                 id: Date.now(),
                 name: name,
                 address: address,
-                priceType: priceType,
-                priceAmount: priceAmount
+                dayPrice: dayPrice,
+                nightPrice: nightPrice
             };
             
             const locations = Storage.getArray('locations');
@@ -1413,18 +1499,24 @@
         }
         
         list.innerHTML = locations.map(loc => {
-            // 既存データとの互換性のため、単価情報がない場合はデフォルト値を設定
-            const priceType = loc.priceType || 'flat';
-            const priceAmount = loc.priceAmount || 0;
+            // 既存データとの互換性のため、昼夜単価がない場合はデフォルト値を設定
+            const dayPrice = loc.dayPrice || loc.priceAmount || 0;
+            const nightPrice = loc.nightPrice || loc.priceAmount || 0;
             
             return `
             <li class="location-item">
                 <div class="location-info">
                     <div class="location-name">${loc.name}</div>
                     <div class="location-address">${loc.address}</div>
-                    <div style="margin-top: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(251, 191, 36, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.4);">
-                        <span style="color: var(--accent); font-weight: 700;">💰 ${priceType === 'flat' ? '一式' : '時間'}</span>
-                        <span style="color: var(--text); font-weight: 700; font-family: 'Orbitron', sans-serif;">${priceAmount.toLocaleString()}円${priceType === 'hourly' ? '/時間' : ''}</span>
+                    <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(251, 191, 36, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.4);">
+                            <span style="color: var(--accent); font-weight: 700;">🌞 昼</span>
+                            <span style="color: var(--text); font-weight: 700; font-family: 'Orbitron', sans-serif;">${dayPrice.toLocaleString()}円</span>
+                        </div>
+                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.4);">
+                            <span style="color: var(--primary); font-weight: 700;">🌙 夜</span>
+                            <span style="color: var(--text); font-weight: 700; font-family: 'Orbitron', sans-serif;">${nightPrice.toLocaleString()}円</span>
+                        </div>
                     </div>
                     <button class="btn btn-secondary btn-small" onclick="openGoogleMaps('${loc.address.replace(/'/g, "\\'")}', '${loc.name.replace(/'/g, "\\'")}', event)" style="margin-top: 0.75rem; width: auto;">
                         🗺️ マップで見る
@@ -1468,12 +1560,16 @@
             return;
         }
         
+        // 既存データとの互換性
+        const dayPrice = location.dayPrice || location.priceAmount || 0;
+        const nightPrice = location.nightPrice || location.priceAmount || 0;
+        
         // フォームに値をセット
         document.getElementById('editLocationId').value = location.id;
         document.getElementById('editLocationName').value = location.name;
         document.getElementById('editLocationAddress').value = location.address;
-        document.getElementById('editPriceType').value = location.priceType || 'flat';
-        document.getElementById('editPriceAmount').value = location.priceAmount || 0;
+        document.getElementById('editDayPrice').value = dayPrice;
+        document.getElementById('editNightPrice').value = nightPrice;
         
         // モーダルを表示
         document.getElementById('editModal').style.display = 'block';
@@ -1492,8 +1588,8 @@
             const id = parseInt(document.getElementById('editLocationId').value);
             const name = document.getElementById('editLocationName').value.trim();
             const address = document.getElementById('editLocationAddress').value.trim();
-            const priceType = document.getElementById('editPriceType').value;
-            const priceAmount = parseFloat(document.getElementById('editPriceAmount').value);
+            const dayPrice = parseFloat(document.getElementById('editDayPrice').value);
+            const nightPrice = parseFloat(document.getElementById('editNightPrice').value);
             
             // バリデーション
             if (!name) {
@@ -1506,8 +1602,13 @@
                 return;
             }
             
-            if (isNaN(priceAmount) || priceAmount < 0) {
-                alert('❌ 単価に正しい金額を入力してください');
+            if (isNaN(dayPrice) || dayPrice < 0) {
+                alert('❌ 昼間単価に正しい金額を入力してください');
+                return;
+            }
+            
+            if (isNaN(nightPrice) || nightPrice < 0) {
+                alert('❌ 夜間単価に正しい金額を入力してください');
                 return;
             }
             
@@ -1524,8 +1625,8 @@
                 ...locations[index],
                 name: name,
                 address: address,
-                priceType: priceType,
-                priceAmount: priceAmount
+                dayPrice: dayPrice,
+                nightPrice: nightPrice
             };
             
             Storage.set('locations', locations);
@@ -1905,10 +2006,10 @@
                 return;
             }
             
-            // 既存データとの互換性のため、単価情報がない場合はデフォルト値を設定
-            if (!location.priceType) {
-                location.priceType = 'flat';
-                location.priceAmount = 0;
+            // 既存データとの互換性のため、昼夜単価情報がない場合はデフォルト値を設定
+            if (!location.dayPrice && !location.nightPrice) {
+                location.dayPrice = location.priceAmount || 0;
+                location.nightPrice = location.priceAmount || 0;
             }
             
             const workId = workItemCounter++;
@@ -1916,6 +2017,12 @@
                 id: workId,
                 locationId: location.id,
                 location: location
+            });
+            
+            console.log('作業を追加しました:', {
+                id: workId,
+                locationName: location.name,
+                workItemsCount: workItems.length
             });
             
             document.getElementById('addWorkModal').classList.remove('active');
@@ -2008,14 +2115,20 @@
                             </button>
                         </div>
                         
-                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.15); border-radius: 12px; border: 2px solid rgba(251, 191, 36, 0.4); display: flex; align-items: center; gap: 1rem;">
-                            <div style="flex: 1;">
-                                <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">💰 単価</div>
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">${loc.priceAmount.toLocaleString()}円${loc.priceType === 'hourly' ? '/時間' : ''}</div>
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.15); border-radius: 12px; border: 2px solid rgba(251, 191, 36, 0.4);">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">🌞 昼間単価</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">${(loc.dayPrice || 0).toLocaleString()}円</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">🌙 夜間単価</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: var(--primary); font-family: 'Orbitron', sans-serif;">${(loc.nightPrice || 0).toLocaleString()}円</div>
+                                </div>
                             </div>
-                            <div style="flex: 1;">
-                                <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">💵 予定金額</div>
-                                <div class="estimated-amount" data-id="${item.id}" style="font-size: 1.125rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">-</div>
+                            <div style="border-top: 1px solid rgba(251, 191, 36, 0.3); padding-top: 0.75rem;">
+                                <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 0.5rem;">💵 予定金額</div>
+                                <div class="estimated-amount" data-id="${item.id}" style="font-size: 1.25rem; font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif; text-align: center;">-</div>
                             </div>
                         </div>
 
@@ -2218,18 +2331,25 @@
             const netTime = workTime - breakTime;
             
             if (workTime > 0) {
-                durationDiv.textContent = `${netTime}分${breakTime > 0 ? ' (休憩' + breakTime + '分)' : ''}`;
+                // 昼夜の時間を分割計算
+                const dayNightWork = calculateDayNightTime(startInput.value, endInput.value);
+                const dayNightBreak = calculateDayNightTime(breakStartInput?.value || '', breakEndInput?.value || '');
                 
-                // 金額計算
+                const netDayMinutes = dayNightWork.dayMinutes - dayNightBreak.dayMinutes;
+                const netNightMinutes = dayNightWork.nightMinutes - dayNightBreak.nightMinutes;
+                
+                durationDiv.textContent = `${netTime}分 (🌞${netDayMinutes}分 🌙${netNightMinutes}分)${breakTime > 0 ? ' 休憩' + breakTime + '分' : ''}`;
+                
+                // 金額計算（昼夜自動切り替え）
                 const workItem = workItems.find(item => item.id === parseInt(id));
                 if (workItem && estimatedAmountDiv) {
                     const location = workItem.location;
-                    let amount = 0;
-                    if (location.priceType === 'flat') {
-                        amount = location.priceAmount || 0;
-                    } else { // hourly
-                        amount = Math.round((netTime / 60) * (location.priceAmount || 0));
-                    }
+                    const dayPrice = location.dayPrice || 0;
+                    const nightPrice = location.nightPrice || 0;
+                    
+                    // 昼間の金額 + 夜間の金額
+                    const amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                    
                     estimatedAmountDiv.textContent = `¥${amount.toLocaleString()}`;
                 }
             } else {
@@ -2267,15 +2387,22 @@
             totalWorkTime += workTime;
             totalBreakTime += breakTime;
             
-            // 金額計算
+            // 金額計算（昼夜自動切り替え）
             if (workTime > 0) {
                 const location = item.location;
-                const netTime = workTime - breakTime;
-                if (location.priceType === 'flat') {
-                    totalRevenue += location.priceAmount || 0;
-                } else { // hourly
-                    totalRevenue += Math.round((netTime / 60) * (location.priceAmount || 0));
-                }
+                
+                // 昼夜の時間を分割計算
+                const dayNightWork = calculateDayNightTime(startInput.value, endInput.value);
+                const dayNightBreak = calculateDayNightTime(breakStartInput?.value || '', breakEndInput?.value || '');
+                
+                const netDayMinutes = dayNightWork.dayMinutes - dayNightBreak.dayMinutes;
+                const netNightMinutes = dayNightWork.nightMinutes - dayNightBreak.nightMinutes;
+                
+                const dayPrice = location.dayPrice || 0;
+                const nightPrice = location.nightPrice || 0;
+                
+                // 昼間の金額 + 夜間の金額
+                totalRevenue += Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
             }
         });
         
@@ -2293,12 +2420,13 @@
             statusDiv.textContent = '保存中...';
             statusDiv.style.color = 'var(--primary)';
             console.log('保存開始');
+            console.log('workItems:', workItems);
             
             // 作業データがあるか確認
             if (workItems.length === 0) {
                 statusDiv.textContent = 'エラー: 保存する作業データがありません';
                 statusDiv.style.color = 'var(--danger)';
-                alert('保存する作業データがありません');
+                alert('❌ 保存する作業データがありません\n\n先に「➕ 作業を追加」で作業を追加してください。');
                 return;
             }
             
@@ -2308,57 +2436,70 @@
                 locations: []
             };
             
-            document.querySelectorAll('.work-item').forEach((item, index) => {
+            // workItems配列を直接使用
+            workItems.forEach((item) => {
                 try {
-                    const location = window.currentWorkLocations[index];
+                    const id = item.id;
+                    const location = item.location;
+                    
                     if (!location) {
-                        console.warn(`Location ${index} not found`);
+                        console.warn(`Location not found for item ${id}`);
                         return;
                     }
                     
-                    const startInput = document.querySelector(`.work-start[data-id="${item.id}"]`);
-                    const endInput = document.querySelector(`.work-end[data-id="${item.id}"]`);
-                    const breakStartInput = document.querySelector(`.break-start[data-id="${item.id}"]`);
-                    const breakEndInput = document.querySelector(`.break-end[data-id="${item.id}"]`);
+                    const startInput = document.querySelector(`.work-start[data-id="${id}"]`);
+                    const endInput = document.querySelector(`.work-end[data-id="${id}"]`);
+                    const breakStartInput = document.querySelector(`.break-start[data-id="${id}"]`);
+                    const breakEndInput = document.querySelector(`.break-end[data-id="${id}"]`);
+                    
+                    if (!startInput || !endInput) {
+                        console.warn(`Input elements not found for item ${id}`);
+                        return;
+                    }
                     
                     const workTime = calculateTimeDiff(startInput.value, endInput.value);
-                    const breakTime = calculateTimeDiff(breakStartInput.value, breakEndInput.value);
+                    const breakTime = calculateTimeDiff(breakStartInput?.value || '', breakEndInput?.value || '');
                     const netTime = workTime - breakTime;
                     
-                    // 金額計算
-                    let amount = 0;
-                    const priceType = location.priceType || 'flat';
-                    const priceAmount = location.priceAmount || 0;
+                    // 昼夜の時間を分割計算
+                    const dayNightWork = calculateDayNightTime(startInput.value, endInput.value);
+                    const dayNightBreak = calculateDayNightTime(breakStartInput?.value || '', breakEndInput?.value || '');
                     
-                    if (priceType === 'flat') {
-                        amount = priceAmount;
-                    } else { // hourly
-                        amount = Math.round((netTime / 60) * priceAmount);
-                    }
+                    const netDayMinutes = dayNightWork.dayMinutes - dayNightBreak.dayMinutes;
+                    const netNightMinutes = dayNightWork.nightMinutes - dayNightBreak.nightMinutes;
+                    
+                    // 金額計算（昼夜自動切り替え）
+                    const dayPrice = location.dayPrice || 0;
+                    const nightPrice = location.nightPrice || 0;
+                    const amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
                     
                     workData.locations.push({
                         locationId: location.id,
                         name: location.name,
                         workStart: startInput.value || '',
                         workEnd: endInput.value || '',
-                        breakStart: breakStartInput.value || '',
-                        breakEnd: breakEndInput.value || '',
-                        priceType: priceType,
-                        priceAmount: priceAmount,
+                        breakStart: breakStartInput?.value || '',
+                        breakEnd: breakEndInput?.value || '',
+                        dayPrice: dayPrice,
+                        nightPrice: nightPrice,
+                        dayMinutes: netDayMinutes,
+                        nightMinutes: netNightMinutes,
                         calculatedAmount: amount,
                         netWorkTime: netTime
                     });
                 } catch (itemError) {
-                    console.error(`Error processing item ${index}:`, itemError);
+                    console.error(`Error processing item ${item.id}:`, itemError);
                 }
             });
             
             console.log('保存データ:', workData);
+            console.log('保存する作業数:', workData.locations.length);
             
             if (workData.locations.length === 0) {
                 statusDiv.textContent = 'エラー: 保存する作業データがありません';
                 statusDiv.style.color = 'var(--danger)';
-                alert('保存する作業データがありません');
+                console.error('作業データが空です。workItems:', workItems);
+                alert('❌ 保存する作業データがありません\n\n作業を追加してから保存してください。');
                 return;
             }
             
@@ -2386,9 +2527,11 @@
             
         } catch (error) {
             console.error('保存エラー:', error);
+            console.error('エラースタック:', error.stack);
+            console.error('workItems:', workItems);
             statusDiv.textContent = '❌ 保存失敗: ' + error.message;
             statusDiv.style.color = 'var(--danger)';
-            alert('保存に失敗しました: ' + error.message);
+            alert('❌ 保存に失敗しました\n\nエラー: ' + error.message + '\n\nブラウザのコンソールを確認してください。');
         }
     });
 
@@ -2543,6 +2686,16 @@
                                                         <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.25rem;">正味時間</div>
                                                         <div style="font-weight: 600; color: var(--primary);">${detail.netWorkTime || 0}分</div>
                                                     </div>
+                                                    ${detail.dayMinutes !== undefined && detail.nightMinutes !== undefined ? `
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.25rem;">昼夜内訳</div>
+                                                        <div style="font-weight: 600;">
+                                                            <span style="color: var(--accent);">🌞${detail.dayMinutes}分</span>
+                                                            <span style="margin: 0 0.25rem;">|</span>
+                                                            <span style="color: var(--primary);">🌙${detail.nightMinutes}分</span>
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
                                                     <div>
                                                         <div style="font-size: 0.75rem; color: var(--text-dark); margin-bottom: 0.25rem;">売上</div>
                                                         <div style="font-weight: 700; color: var(--accent); font-family: 'Orbitron', sans-serif;">¥${detail.calculatedAmount.toLocaleString()}</div>
