@@ -658,7 +658,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0;
         gap: 1rem;
         flex-wrap: nowrap;
     }
@@ -693,6 +693,28 @@
         white-space: normal;
         text-align: left;
         min-width: 0;
+        display: block !important;
+    }
+
+    .work-location-name {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--primary);
+        text-shadow: 0 0 15px var(--primary-glow);
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+        border-radius: 12px;
+        border: 2px solid rgba(0, 212, 255, 0.3);
+        font-family: 'Exo 2', 'Hiragino Sans', sans-serif;
+        letter-spacing: 0.05em;
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        text-align: left;
         display: block !important;
     }
 
@@ -2117,13 +2139,14 @@
                     <div class="work-item">
                         <div class="work-header">
                             <div class="work-order">${index + 1}</div>
-                            <div class="work-name" style="writing-mode: horizontal-tb !important; text-orientation: mixed !important; display: block; white-space: normal; word-break: keep-all; overflow-wrap: anywhere;">${loc.name}</div>
                             <div class="order-controls">
                                 <button class="order-btn" onclick="moveWorkUp(${item.id})" ${index === 0 ? 'disabled' : ''} title="上に移動">▲</button>
                                 <button class="order-btn" onclick="moveWorkDown(${item.id})" ${index === workItems.length - 1 ? 'disabled' : ''} title="下に移動">▼</button>
                                 <button class="order-btn" onclick="removeWorkItem(${item.id})" style="background: var(--danger); border-color: var(--danger);" title="削除">✕</button>
                             </div>
                         </div>
+                        
+                        <div class="work-location-name">${loc.name}</div>
                         
                         <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 212, 255, 0.1); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3);">
                             <div style="font-size: 0.875rem; color: var(--text-dark);">📍 ${loc.address}</div>
