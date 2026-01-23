@@ -39,6 +39,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<!-- jsPDF for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
 <style>
     :root {
         --primary: #00d4ff;
@@ -1260,7 +1265,7 @@
                     🖨️ 印刷
                 </button>
                 <button class="btn btn-secondary" id="exportReportDataBtn">
-                    📤 レポート出力
+                    📄 PDF出力
                 </button>
             </div>
         </div>
@@ -1312,6 +1317,13 @@
             <div class="form-group">
                 <label class="form-label">住所</label>
                 <input type="text" id="editLocationAddress" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">単価タイプ</label>
+                <select id="editPriceType" class="form-input" required>
+                    <option value="flat">一式</option>
+                    <option value="hourly">時間単価</option>
+                </select>
             </div>
             <div class="form-group">
                 <label class="form-label">🌞 昼間単価（円）</label>
@@ -1483,6 +1495,7 @@
             // バリデーション
             const name = document.getElementById('locationName').value.trim();
             const address = document.getElementById('locationAddress').value.trim();
+            const priceType = document.getElementById('priceType').value;
             const dayPrice = parseFloat(document.getElementById('dayPrice').value);
             const nightPrice = parseFloat(document.getElementById('nightPrice').value);
             
@@ -1510,6 +1523,7 @@
                 id: Date.now(),
                 name: name,
                 address: address,
+                priceType: priceType,
                 dayPrice: dayPrice,
                 nightPrice: nightPrice
             };
@@ -1541,13 +1555,18 @@
             // 既存データとの互換性のため、昼夜単価がない場合はデフォルト値を設定
             const dayPrice = loc.dayPrice || loc.priceAmount || 0;
             const nightPrice = loc.nightPrice || loc.priceAmount || 0;
+            const priceType = loc.priceType || 'flat';
+            const priceTypeLabel = priceType === 'flat' ? '一式' : '時間単価';
             
             return `
             <li class="location-item">
                 <div class="location-info">
                     <div class="location-name">${loc.name}</div>
                     <div class="location-address">${loc.address}</div>
-                    <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.4);">
+                            <span style="color: var(--primary); font-weight: 700;">💰 ${priceTypeLabel}</span>
+                        </div>
                         <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(251, 191, 36, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.4);">
                             <span style="color: var(--accent); font-weight: 700;">🌞 昼</span>
                             <span style="color: var(--text); font-weight: 700; font-family: 'Orbitron', sans-serif;">${dayPrice.toLocaleString()}円</span>
@@ -1602,11 +1621,13 @@
         // 既存データとの互換性
         const dayPrice = location.dayPrice || location.priceAmount || 0;
         const nightPrice = location.nightPrice || location.priceAmount || 0;
+        const priceType = location.priceType || 'flat';
         
         // フォームに値をセット
         document.getElementById('editLocationId').value = location.id;
         document.getElementById('editLocationName').value = location.name;
         document.getElementById('editLocationAddress').value = location.address;
+        document.getElementById('editPriceType').value = priceType;
         document.getElementById('editDayPrice').value = dayPrice;
         document.getElementById('editNightPrice').value = nightPrice;
         
@@ -1627,6 +1648,7 @@
             const id = parseInt(document.getElementById('editLocationId').value);
             const name = document.getElementById('editLocationName').value.trim();
             const address = document.getElementById('editLocationAddress').value.trim();
+            const priceType = document.getElementById('editPriceType').value;
             const dayPrice = parseFloat(document.getElementById('editDayPrice').value);
             const nightPrice = parseFloat(document.getElementById('editNightPrice').value);
             
@@ -1664,6 +1686,7 @@
                 ...locations[index],
                 name: name,
                 address: address,
+                priceType: priceType,
                 dayPrice: dayPrice,
                 nightPrice: nightPrice
             };
@@ -2153,6 +2176,9 @@
                         </div>
                         
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.15); border-radius: 12px; border: 2px solid rgba(251, 191, 36, 0.4);">
+                            <div style="margin-bottom: 0.75rem; text-align: center;">
+                                <span style="display: inline-block; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.75rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.4); color: var(--primary); font-weight: 700; font-size: 0.875rem;">💰 ${(loc.priceType || 'flat') === 'flat' ? '一式' : '時間単価'}</span>
+                            </div>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <div>
                                     <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">🌞 昼間単価</div>
@@ -2377,15 +2403,23 @@
                 
                 durationDiv.textContent = `${netTime}分 (🌞${netDayMinutes}分 🌙${netNightMinutes}分)${breakTime > 0 ? ' 休憩' + breakTime + '分' : ''}`;
                 
-                // 金額計算（昼夜自動切り替え）
+                // 金額計算
                 const workItem = workItems.find(item => item.id === parseInt(id));
                 if (workItem && estimatedAmountDiv) {
                     const location = workItem.location;
+                    const priceType = location.priceType || 'flat';
                     const dayPrice = location.dayPrice || 0;
                     const nightPrice = location.nightPrice || 0;
                     
-                    // 昼間の金額 + 夜間の金額
-                    const amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                    let amount = 0;
+                    
+                    if (priceType === 'flat') {
+                        // 一式：昼間時間が多い場合は昼間単価、夜間時間が多い場合は夜間単価
+                        amount = netDayMinutes >= netNightMinutes ? dayPrice : nightPrice;
+                    } else {
+                        // 時間単価：昼間の金額 + 夜間の金額
+                        amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                    }
                     
                     estimatedAmountDiv.textContent = `¥${amount.toLocaleString()}`;
                 }
@@ -2424,9 +2458,10 @@
             totalWorkTime += workTime;
             totalBreakTime += breakTime;
             
-            // 金額計算（昼夜自動切り替え）
+            // 金額計算
             if (workTime > 0) {
                 const location = item.location;
+                const priceType = location.priceType || 'flat';
                 
                 // 昼夜の時間を分割計算
                 const dayNightWork = calculateDayNightTime(startInput.value, endInput.value);
@@ -2438,8 +2473,13 @@
                 const dayPrice = location.dayPrice || 0;
                 const nightPrice = location.nightPrice || 0;
                 
-                // 昼間の金額 + 夜間の金額
-                totalRevenue += Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                if (priceType === 'flat') {
+                    // 一式：昼間時間が多い場合は昼間単価、夜間時間が多い場合は夜間単価
+                    totalRevenue += netDayMinutes >= netNightMinutes ? dayPrice : nightPrice;
+                } else {
+                    // 時間単価：昼間の金額 + 夜間の金額
+                    totalRevenue += Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                }
             }
         });
         
@@ -2505,10 +2545,19 @@
                     const netDayMinutes = dayNightWork.dayMinutes - dayNightBreak.dayMinutes;
                     const netNightMinutes = dayNightWork.nightMinutes - dayNightBreak.nightMinutes;
                     
-                    // 金額計算（昼夜自動切り替え）
+                    // 金額計算
+                    const priceType = location.priceType || 'flat';
                     const dayPrice = location.dayPrice || 0;
                     const nightPrice = location.nightPrice || 0;
-                    const amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                    
+                    let amount = 0;
+                    if (priceType === 'flat') {
+                        // 一式：昼間時間が多い場合は昼間単価、夜間時間が多い場合は夜間単価
+                        amount = netDayMinutes >= netNightMinutes ? dayPrice : nightPrice;
+                    } else {
+                        // 時間単価：昼間の金額 + 夜間の金額
+                        amount = Math.round((netDayMinutes / 60) * dayPrice) + Math.round((netNightMinutes / 60) * nightPrice);
+                    }
                     
                     workData.locations.push({
                         locationId: location.id,
@@ -2517,6 +2566,7 @@
                         workEnd: endInput.value || '',
                         breakStart: breakStartInput?.value || '',
                         breakEnd: breakEndInput?.value || '',
+                        priceType: priceType,
                         dayPrice: dayPrice,
                         nightPrice: nightPrice,
                         dayMinutes: netDayMinutes,
@@ -2814,8 +2864,8 @@
                             count: 0,
                             totalTime: 0,
                             totalRevenue: 0,
-                            priceType: loc.priceType || locationInfo.priceType || 'flat',
-                            priceAmount: loc.priceAmount || locationInfo.priceAmount || 0,
+                            dayMinutes: 0,
+                            nightMinutes: 0,
                             workDetails: []
                         };
                     }
@@ -2829,6 +2879,12 @@
                         summary[loc.locationId].totalTime += (workTime - breakTime);
                     }
                     
+                    // 昼夜の時間を集計
+                    if (loc.dayMinutes !== undefined && loc.nightMinutes !== undefined) {
+                        summary[loc.locationId].dayMinutes += loc.dayMinutes;
+                        summary[loc.locationId].nightMinutes += loc.nightMinutes;
+                    }
+                    
                     if (loc.calculatedAmount !== undefined) {
                         summary[loc.locationId].totalRevenue += loc.calculatedAmount;
                     }
@@ -2840,6 +2896,8 @@
                         breakStart: loc.breakStart,
                         breakEnd: loc.breakEnd,
                         netWorkTime: loc.netWorkTime,
+                        dayMinutes: loc.dayMinutes || 0,
+                        nightMinutes: loc.nightMinutes || 0,
                         calculatedAmount: loc.calculatedAmount || 0
                     });
                 });
@@ -2852,48 +2910,126 @@
             
             const totalRevenue = summaryArray.reduce((sum, s) => sum + s.totalRevenue, 0);
             const totalWorkTime = summaryArray.reduce((sum, s) => sum + s.totalTime, 0);
+            const totalDayMinutes = summaryArray.reduce((sum, s) => sum + s.dayMinutes, 0);
+            const totalNightMinutes = summaryArray.reduce((sum, s) => sum + s.nightMinutes, 0);
             
-            const reportData = {
-                version: '1.0',
-                exportDate: new Date().toISOString(),
-                appName: 'SNOW OPS - 除雪出来高管理',
-                reportType: period,
-                period: {
-                    type: period === 'daily' ? '日次' : period === 'weekly' ? '週次' : '月次',
-                    startDate: filteredRecords.length > 0 ? filteredRecords[0].date : null,
-                    endDate: filteredRecords.length > 0 ? filteredRecords[filteredRecords.length - 1].date : null
-                },
-                summary: {
-                    totalRevenue: totalRevenue,
-                    totalWorkTime: totalWorkTime,
-                    totalLocations: summaryArray.length,
-                    totalWorkCount: summaryArray.reduce((sum, s) => sum + s.count, 0)
-                },
-                details: summaryArray,
-                rawRecords: filteredRecords
-            };
+            // PDF生成
+            generateReportPDF(period, summaryArray, {
+                totalRevenue,
+                totalWorkTime,
+                totalDayMinutes,
+                totalNightMinutes
+            });
             
-            const dataStr = JSON.stringify(reportData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            const dateStr = new Date().toISOString().split('T')[0];
-            const periodName = period === 'daily' ? '日次' : period === 'weekly' ? '週次' : '月次';
-            link.download = `snow-ops-report-${periodName}-${dateStr}.json`;
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            alert(`✅ ${periodName}レポートをエクスポートしました！\n\n総売上: ¥${totalRevenue.toLocaleString()}\n総作業時間: ${totalWorkTime}分`);
         } catch (error) {
             console.error('Report export error:', error);
             alert('❌ レポートのエクスポートに失敗しました: ' + error.message);
         }
     });
+    
+    // PDF生成関数
+    function generateReportPDF(period, summaryArray, totals) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'landscape', // A4横
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const periodName = period === 'daily' ? '日次' : period === 'weekly' ? '週次' : '月次';
+        const dateStr = new Date().toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        
+        // タイトル
+        doc.setFontSize(18);
+        doc.text('除雪作業 集計表', 148, 15, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.text(`${periodName}レポート`, 148, 23, { align: 'center' });
+        doc.text(`出力日: ${dateStr}`, 148, 30, { align: 'center' });
+        
+        // 表のヘッダーとデータ
+        const headers = [
+            ['契約先名', '作業回数', '昼間時間\n(分)', '夜間時間\n(分)', '合計時間\n(分)', '売上金額\n(円)']
+        ];
+        
+        const data = summaryArray.map(item => [
+            item.name,
+            item.count + '回',
+            item.dayMinutes || '-',
+            item.nightMinutes || '-',
+            item.totalTime,
+            '¥' + item.totalRevenue.toLocaleString()
+        ]);
+        
+        // 合計行
+        data.push([
+            '合計',
+            summaryArray.reduce((sum, s) => sum + s.count, 0) + '回',
+            totals.totalDayMinutes || '-',
+            totals.totalNightMinutes || '-',
+            totals.totalWorkTime,
+            '¥' + totals.totalRevenue.toLocaleString()
+        ]);
+        
+        // 表を生成
+        doc.autoTable({
+            startY: 40,
+            head: headers,
+            body: data,
+            theme: 'grid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 11,
+                cellPadding: 4,
+                overflow: 'linebreak',
+                halign: 'center',
+                valign: 'middle'
+            },
+            headStyles: {
+                fillColor: [0, 212, 255],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 12
+            },
+            columnStyles: {
+                0: { halign: 'left', cellWidth: 60 },  // 契約先名
+                1: { halign: 'center', cellWidth: 30 }, // 作業回数
+                2: { halign: 'right', cellWidth: 30 },  // 昼間時間
+                3: { halign: 'right', cellWidth: 30 },  // 夜間時間
+                4: { halign: 'right', cellWidth: 30 },  // 合計時間
+                5: { halign: 'right', cellWidth: 50 }   // 売上金額
+            },
+            didParseCell: function(data) {
+                // 合計行を太字に
+                if (data.row.index === summaryArray.length) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [240, 240, 240];
+                }
+            }
+        });
+        
+        // フッター
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(9);
+            doc.text(
+                `SNOW OPS - 除雪出来高管理システム   ページ ${i} / ${pageCount}`,
+                148,
+                200,
+                { align: 'center' }
+            );
+        }
+        
+        // 保存
+        doc.save(`除雪集計表_${periodName}_${dateStr.replace(/\//g, '')}.pdf`);
+        
+        alert(`✅ ${periodName}レポートをPDF出力しました！\n\n総売上: ¥${totals.totalRevenue.toLocaleString()}\n総作業時間: ${totals.totalWorkTime}分`);
+    }
 
     // 初期化
     updateCurrentDate();
