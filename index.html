@@ -63,6 +63,8 @@
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
     }
 
     body {
@@ -684,13 +686,14 @@
         font-size: 1.25rem;
         color: var(--text);
         line-height: 1.3;
-        writing-mode: horizontal-tb;
-        text-orientation: mixed;
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
         word-break: keep-all;
         overflow-wrap: anywhere;
         white-space: normal;
         text-align: left;
         min-width: 0;
+        display: block !important;
     }
 
     .work-details {
@@ -2114,7 +2117,7 @@
                     <div class="work-item">
                         <div class="work-header">
                             <div class="work-order">${index + 1}</div>
-                            <div class="work-name">${loc.name}</div>
+                            <div class="work-name" style="writing-mode: horizontal-tb !important; text-orientation: mixed !important; display: block; white-space: normal; word-break: keep-all; overflow-wrap: anywhere;">${loc.name}</div>
                             <div class="order-controls">
                                 <button class="order-btn" onclick="moveWorkUp(${item.id})" ${index === 0 ? 'disabled' : ''} title="上に移動">▲</button>
                                 <button class="order-btn" onclick="moveWorkDown(${item.id})" ${index === workItems.length - 1 ? 'disabled' : ''} title="下に移動">▼</button>
@@ -2123,10 +2126,7 @@
                         </div>
                         
                         <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 212, 255, 0.1); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3);">
-                            <div style="font-size: 0.875rem; color: var(--text-dark); margin-bottom: 0.5rem;">📍 ${loc.address}</div>
-                            <button class="btn btn-secondary btn-small" onclick="openGoogleMaps('${loc.address.replace(/'/g, "\\'")}', '${loc.name.replace(/'/g, "\\'")}', event)" style="width: 100%;">
-                                🗺️ マップで見る
-                            </button>
+                            <div style="font-size: 0.875rem; color: var(--text-dark);">📍 ${loc.address}</div>
                         </div>
                         
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.15); border-radius: 12px; border: 2px solid rgba(251, 191, 36, 0.4);">
