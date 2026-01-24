@@ -19,7 +19,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a0e27'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='256' fill='%2300d4ff'>❄️</text></svg>">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>❄️</text></svg>">
 
-<title>除雪出来高管理 - SNOW OPS</title>
+<title>除雪出来高管理 - SNOW OPS CLEAN VERSION</title>
 
 <!-- Manifest inline -->
 <link rel="manifest" href="data:application/manifest+json,{
@@ -1347,6 +1347,10 @@
 </div>
 
 <script>
+    // バージョン確認
+    console.log('=== SNOW OPS CLEAN VERSION 読み込み開始 ===');
+    console.log('タイムスタンプ:', new Date().toISOString());
+    
     // データストレージ
     const Storage = {
         get(key) {
@@ -3164,12 +3168,12 @@
     window.onload = function() {
         window.print();
     };
-</script>
+<` + `/script>
 ```
 
-</body>
-</html>
-            `;
+<`+`/body>
+<`+`/html>
+`;
 
 ```
         printWindow.document.write(printContent);
@@ -3177,180 +3181,6 @@
         
         alert(`✅ ${periodName}レポートの印刷ダイアログを開きました！\n\n総売上: ¥${totals.totalRevenue.toLocaleString()}\n総作業時間: ${totals.totalWorkTime}分\n\n※印刷ダイアログで「PDFとして保存」を選択してください`);
     }
-
-    // グローバルエラーハンドラー
-    window.addEventListener('error', function(e) {
-        console.error('グローバルエラー:', e.error);
-        console.error('エラーメッセージ:', e.message);
-        console.error('ファイル:', e.filename);
-        console.error('行:', e.lineno);
-        console.error('列:', e.colno);
-        alert('エラーが発生しました:\n' + e.message + '\n\n行: ' + e.lineno + '\n列: ' + e.colno);
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        console.error('Promise エラー:', e.reason);
-        alert('Promise エラーが発生しました:\n' + e.reason);
-    });
-    
-    // 初期化
-    updateCurrentDate();
-    renderLocationList();
-    // 日付は0:00に自動更新される（updateCurrentDate内で設定）
-    
-    // イベントリスナーが正しく登録されたか確認
-    console.log('アプリ初期化完了');
-    console.log('saveWorkBtn:', document.getElementById('saveWorkBtn'));
-    
-    // 入力欄でコピー&ペーストを明示的に許可
-    document.querySelectorAll('.form-input').forEach(input => {
-        // コピー&ペーストイベントの伝播を許可
-        input.addEventListener('copy', (e) => {
-            e.stopPropagation();
-        }, true);
-        
-        input.addEventListener('cut', (e) => {
-            e.stopPropagation();
-        }, true);
-        
-        input.addEventListener('paste', (e) => {
-            e.stopPropagation();
-        }, true);
-        
-        // タッチイベントの伝播も許可
-        input.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-        }, true);
-        
-        input.addEventListener('touchmove', (e) => {
-            e.stopPropagation();
-        }, true);
-        
-        input.addEventListener('touchend', (e) => {
-            e.stopPropagation();
-        }, true);
-    });
-    
-    // PWA インストール処理
-    let deferredPrompt;
-    
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        
-        // インストールボタンを表示（ヘッダーに追加）
-        const installBtn = document.createElement('button');
-        installBtn.textContent = '📱 アプリ化';
-        installBtn.className = 'btn btn-secondary btn-small';
-        installBtn.style.cssText = 'position: fixed; top: 1rem; right: 1rem; z-index: 1000; width: auto; padding: 0.5rem 1rem; font-size: 0.75rem; margin: 0;';
-        
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response: ${outcome}`);
-                deferredPrompt = null;
-                installBtn.remove();
-            }
-        });
-        
-        document.body.appendChild(installBtn);
-        
-        // 3秒後にフェードイン
-        setTimeout(() => {
-            installBtn.style.opacity = '0';
-            installBtn.style.transition = 'opacity 0.5s';
-            setTimeout(() => installBtn.style.opacity = '1', 100);
-        }, 3000);
-    });
-    
-    // インストール完了イベント
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA installed successfully');
-        deferredPrompt = null;
-    });
-    
-    // Service Worker登録
-    if ('serviceWorker' in navigator) {
-        // Service Workerをインラインで登録
-        const swCode = `
-            const CACHE_NAME = 'snow-ops-v1';
-            const urlsToCache = ['./', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
-            
-            self.addEventListener('install', (event) => {
-                event.waitUntil(
-                    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
-                );
-            });
-            
-            self.addEventListener('fetch', (event) => {
-                event.respondWith(
-                    caches.match(event.request).then((response) => {
-                        return response || fetch(event.request);
-                    })
-                );
-            });
-        `;
-        
-        const blob = new Blob([swCode], { type: 'application/javascript' });
-        const swUrl = URL.createObjectURL(blob);
-        
-        navigator.serviceWorker.register(swUrl)
-            .then(registration => {
-                console.log('Service Worker registered:', registration);
-            })
-            .catch(error => {
-                console.log('Service Worker registration failed:', error);
-            });
-    }
-    
-    // パフォーマンス最適化: passive event listeners
-    document.addEventListener('touchstart', () => {}, { passive: true });
-    document.addEventListener('touchmove', () => {}, { passive: true });
-    
-    // スマホのスクロール最適化
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    
-    // バックグラウンド時のタイマー停止
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            // アプリがバックグラウンドに
-            console.log('App in background');
-        } else {
-            // アプリがフォアグラウンドに
-            console.log('App in foreground');
-            updateCurrentDate();
-        }
-    });
-    
-    // 定期的な自動保存（30秒ごと）
-    setInterval(() => {
-        if (workItems.length > 0) {
-            saveWorkInProgress();
-        }
-    }, 30000);
-    
-    // ページを離れる前の確認
-    window.addEventListener('beforeunload', (e) => {
-        // 作業中データを保存
-        if (workItems.length > 0) {
-            saveWorkInProgress();
-            
-            // 未保存の作業がある場合は警告
-            const hasUnsavedWork = workItems.some(item => {
-                const workEnd = document.querySelector(`.work-end[data-id="${item.id}"]`);
-                return workEnd && workEnd.value; // 終了時間が入力されている
-            });
-            
-            if (hasUnsavedWork) {
-                e.preventDefault();
-                e.returnValue = '未保存の作業があります。本当にページを離れますか？';
-                return e.returnValue;
-            }
-        }
-    });
     
     // 初期化
     console.log('=== 初期化開始 ===');
