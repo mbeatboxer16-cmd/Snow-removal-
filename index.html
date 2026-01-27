@@ -266,6 +266,7 @@
         border-radius: 20px;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
+        overflow-x: auto;
     }
 
     .daily-report-header {
@@ -291,22 +292,30 @@
     .daily-report-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.8rem;
+        table-layout: fixed;
     }
 
     .daily-report-table th {
         background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         color: white;
-        padding: 0.75rem 0.5rem;
+        padding: 0.75rem 0.4rem;
         text-align: left;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         border-bottom: 2px solid var(--primary);
+        word-wrap: break-word;
     }
 
+    .daily-report-table th:nth-child(1) { width: 30%; }
+    .daily-report-table th:nth-child(2) { width: 22%; }
+    .daily-report-table th:nth-child(3) { width: 26%; }
+    .daily-report-table th:nth-child(4) { width: 22%; }
+
     .daily-report-table td {
-        padding: 0.75rem 0.5rem;
+        padding: 0.75rem 0.4rem;
         border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 
     .daily-report-table tr:last-child td {
@@ -316,15 +325,16 @@
     .contractor-name {
         font-weight: 700;
         color: var(--primary);
-        font-size: 0.875rem;
+        font-size: 0.75rem;
+        word-break: break-all;
     }
 
     .price-badge {
         display: inline-block;
-        padding: 0.25rem 0.5rem;
+        padding: 0.2rem 0.4rem;
         border-radius: 6px;
         font-weight: 700;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         white-space: nowrap;
     }
 
@@ -341,19 +351,19 @@
     .work-time {
         color: var(--text);
         font-weight: 600;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 
     .work-duration {
         color: var(--text-dark);
-        font-size: 0.65rem;
-        margin-top: 0.25rem;
+        font-size: 0.6rem;
+        margin-top: 0.15rem;
     }
 
     .amount {
         font-weight: 700;
         color: var(--success);
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
 
     .daily-report-footer {
@@ -373,14 +383,14 @@
     }
 
     .footer-label {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: var(--text-dark);
         margin-bottom: 0.5rem;
     }
 
     .footer-value {
         font-family: 'Orbitron', sans-serif;
-        font-size: 1.25rem;
+        font-size: 1.1rem;
         color: var(--primary);
         font-weight: 700;
     }
@@ -1052,15 +1062,15 @@
                                     </td>
                                     <td>
                                         <span class="price-badge ${priceClass}">
-                                            ${priceIcon}¥${detail.price.toLocaleString()}
+                                            ${priceIcon}¥${(detail.price / 1000).toFixed(0)}k
                                         </span>
                                     </td>
                                     <td>
                                         <div class="work-time">${detail.work.workStart}〜${detail.work.workEnd}</div>
-                                        <div class="work-duration">(${hours > 0 ? hours + '時間' : ''}${mins}分)</div>
+                                        <div class="work-duration">(${hours > 0 ? hours + 'h' : ''}${mins}m)</div>
                                     </td>
                                     <td>
-                                        <div class="amount">¥${detail.amount.toLocaleString()}</div>
+                                        <div class="amount">¥${(detail.amount / 1000).toFixed(1)}k</div>
                                     </td>
                                 </tr>
                             `;
@@ -1072,7 +1082,7 @@
                     <div class="footer-grid">
                         <div class="footer-item">
                             <div class="footer-label">合計作業時間</div>
-                            <div class="footer-value">${totalHours > 0 ? totalHours + 'h' : ''}${remainMinutes}m</div>
+                            <div class="footer-value">${totalHours}h${remainMinutes}m</div>
                         </div>
                         <div class="footer-item">
                             <div class="footer-label">合計出来高</div>
@@ -1089,7 +1099,7 @@
     renderLocationList();
     updateWorkLocationSelect();
     
-    console.log('✅ SNOW OPS 完全版(出来高金額表示付き)が読み込まれました');
+    console.log('✅ SNOW OPS 完全版(表最適化)が読み込まれました');
 </script>
 ```
 
