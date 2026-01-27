@@ -291,21 +291,22 @@
     .daily-report-table {
         width: 100%;
         border-collapse: collapse;
+        font-size: 0.8rem;
     }
 
     .daily-report-table th {
         background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         color: white;
-        padding: 1rem 0.75rem;
+        padding: 0.75rem 0.5rem;
         text-align: left;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         border-bottom: 2px solid var(--primary);
     }
 
     .daily-report-table td {
-        padding: 1rem 0.75rem;
+        padding: 0.75rem 0.5rem;
         border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
 
     .daily-report-table tr:last-child td {
@@ -315,15 +316,16 @@
     .contractor-name {
         font-weight: 700;
         color: var(--primary);
-        font-size: 1rem;
+        font-size: 0.875rem;
     }
 
     .price-badge {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 8px;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
         font-weight: 700;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 
     .price-day {
@@ -339,32 +341,52 @@
     .work-time {
         color: var(--text);
         font-weight: 600;
+        font-size: 0.75rem;
     }
 
     .work-duration {
         color: var(--text-dark);
-        font-size: 0.8rem;
+        font-size: 0.65rem;
         margin-top: 0.25rem;
+    }
+
+    .amount {
+        font-weight: 700;
+        color: var(--success);
+        font-size: 0.875rem;
     }
 
     .daily-report-footer {
         margin-top: 1.5rem;
         padding-top: 1rem;
         border-top: 2px solid var(--primary);
-        text-align: right;
     }
 
-    .total-label {
-        font-size: 0.875rem;
+    .footer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .footer-item {
+        text-align: center;
+    }
+
+    .footer-label {
+        font-size: 0.75rem;
         color: var(--text-dark);
         margin-bottom: 0.5rem;
     }
 
-    .total-time {
+    .footer-value {
         font-family: 'Orbitron', sans-serif;
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         color: var(--primary);
         font-weight: 700;
+    }
+
+    .footer-value.amount {
+        color: var(--success);
     }
 
     .date-selector {
@@ -435,18 +457,6 @@
         margin-bottom: 1rem;
         font-size: 0.875rem;
         color: var(--text-dark);
-    }
-
-    .file-input-wrapper {
-        position: relative;
-        overflow: hidden;
-        display: inline-block;
-        width: 100%;
-    }
-
-    .file-input-wrapper input[type=file] {
-        position: absolute;
-        left: -9999px;
     }
 
     .btn-grid {
@@ -644,6 +654,11 @@
         return endMinutes - startMinutes;
     }
 
+    // 出来高金額計算（単価 × 分数 ÷ 60）
+    function calculateAmount(price, minutes) {
+        return Math.round(price * minutes / 60);
+    }
+
     // バックアップエクスポート
     document.getElementById('exportBackupBtn').addEventListener('click', () => {
         try {
@@ -687,27 +702,21 @@
             try {
                 const backupData = JSON.parse(event.target.result);
                 
-                // データ検証
                 if (!backupData.version || !backupData.locations || !backupData.workRecords) {
                     throw new Error('無効なバックアップファイル');
                 }
 
-                // 確認ダイアログ
                 if (!confirm('⚠️ 現在のデータは上書きされます。復元しますか？')) {
                     return;
                 }
 
-                // データ復元
                 Storage.set('locations', backupData.locations);
                 Storage.set('workRecords', backupData.workRecords);
 
-                // 画面更新
                 renderLocationList();
                 updateWorkLocationSelect();
                 
                 alert('✅ データを復元しました');
-                
-                // ファイル入力をリセット
                 e.target.value = '';
             } catch (error) {
                 console.error('復元エラー:', error);
@@ -988,8 +997,26 @@
         );
 
         let totalMinutes = 0;
-        allWorks.forEach(work => {
-            totalMinutes += calculateWorkMinutes(work.workStart, work.workEnd);
+        let totalAmount = 0;
+
+        const workDetails = allWorks.map(work => {
+            const location = locations.find(l => l.id === work.locationId);
+            const timeType = getTimeType(work.workStart);
+            const price = location ? (timeType === 'day' ? location.dayPrice : location.nightPrice) : 0;
+            const minutes = calculateWorkMinutes(work.workStart, work.workEnd);
+            const amount = calculateAmount(price, minutes);
+            
+            totalMinutes += minutes;
+            totalAmount += amount;
+            
+            return {
+                work,
+                location,
+                timeType,
+                price,
+                minutes,
+                amount
+            };
         });
 
         const totalHours = Math.floor(totalMinutes / 60);
@@ -1008,32 +1035,32 @@
                             <th>契約先名</th>
                             <th>単価</th>
                             <th>作業時間</th>
+                            <th>出来高</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${allWorks.map(work => {
-                            const location = locations.find(l => l.id === work.locationId);
-                            const timeType = getTimeType(work.workStart);
-                            const price = location ? (timeType === 'day' ? location.dayPrice : location.nightPrice) : 0;
-                            const priceClass = timeType === 'day' ? 'price-day' : 'price-night';
-                            const priceIcon = timeType === 'day' ? '🌞' : '🌙';
-                            const minutes = calculateWorkMinutes(work.workStart, work.workEnd);
-                            const hours = Math.floor(minutes / 60);
-                            const mins = minutes % 60;
+                        ${workDetails.map(detail => {
+                            const priceClass = detail.timeType === 'day' ? 'price-day' : 'price-night';
+                            const priceIcon = detail.timeType === 'day' ? '🌞' : '🌙';
+                            const hours = Math.floor(detail.minutes / 60);
+                            const mins = detail.minutes % 60;
                             
                             return `
                                 <tr>
                                     <td>
-                                        <div class="contractor-name">${work.locationName}</div>
+                                        <div class="contractor-name">${detail.work.locationName}</div>
                                     </td>
                                     <td>
                                         <span class="price-badge ${priceClass}">
-                                            ${priceIcon} ¥${price.toLocaleString()}
+                                            ${priceIcon}¥${detail.price.toLocaleString()}
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="work-time">${work.workStart}〜${work.workEnd}</div>
+                                        <div class="work-time">${detail.work.workStart}〜${detail.work.workEnd}</div>
                                         <div class="work-duration">(${hours > 0 ? hours + '時間' : ''}${mins}分)</div>
+                                    </td>
+                                    <td>
+                                        <div class="amount">¥${detail.amount.toLocaleString()}</div>
                                     </td>
                                 </tr>
                             `;
@@ -1042,8 +1069,16 @@
                 </table>
                 
                 <div class="daily-report-footer">
-                    <div class="total-label">合計作業時間</div>
-                    <div class="total-time">${totalHours > 0 ? totalHours + '時間' : ''}${remainMinutes}分</div>
+                    <div class="footer-grid">
+                        <div class="footer-item">
+                            <div class="footer-label">合計作業時間</div>
+                            <div class="footer-value">${totalHours > 0 ? totalHours + 'h' : ''}${remainMinutes}m</div>
+                        </div>
+                        <div class="footer-item">
+                            <div class="footer-label">合計出来高</div>
+                            <div class="footer-value amount">¥${totalAmount.toLocaleString()}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1054,7 +1089,7 @@
     renderLocationList();
     updateWorkLocationSelect();
     
-    console.log('✅ SNOW OPS 完全版(バックアップ機能付き)が読み込まれました');
+    console.log('✅ SNOW OPS 完全版(出来高金額表示付き)が読み込まれました');
 </script>
 ```
 
